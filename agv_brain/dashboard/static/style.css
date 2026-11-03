@@ -193,6 +193,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; }
 .warehouse { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .rack { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; }
 .rack b { font: 600 22px/1.1 var(--round); display: block; }
+.rack button { margin-left: auto; align-self: center; }
+button.small { padding: 5px 11px; font-size: 13px; }
 .rack div span { font-size: 13px; color: var(--ink-2); }
 .rack.low { border-color: #f0a417; }
 .rack.low div span.state { color: var(--warn); font-weight: 500; }
@@ -236,6 +238,7 @@ table.rank { width: 100%; border-collapse: collapse; font-size: 14px; }
 .feed .i.delivered { background: var(--good-bg); color: var(--good); }
 .feed .i.obstacle, .feed .i.reroute { background: var(--crit-bg); color: var(--crit); }
 .feed .i.task { background: var(--motor); color: var(--motor-ink); }
+.feed .i.refill { background: var(--robot-soft); color: var(--robot); }
 
 /* ---------- Try it ---------- */
 .try-grid { display: grid; grid-template-columns: minmax(300px, 5fr) 7fr; gap: 28px; align-items: start; }

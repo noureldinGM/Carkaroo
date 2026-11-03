@@ -9,8 +9,8 @@ Mosquitto may use the network: allow it on private networks.
 
 Cloud bridge: set `cloud.host` in config/mqtt.yaml, plus the environment
 variables HIVEMQ_USERNAME and HIVEMQ_PASSWORD. Then every message under
-factory/# is copied to the cloud, and manual requests (factory/ai/request)
-can come back from it.
+factory/# is copied to the cloud, and manual requests (factory/ai/request) and
+warehouse refills (factory/warehouse/refill) can come back from it.
 """
 
 import argparse
@@ -86,6 +86,7 @@ def build_config(port: int, cloud: dict, folder: Path) -> tuple[str, bool]:
             "start_type automatic",
             "topic factory/# out 1",
             "topic factory/ai/request in 1",
+            "topic factory/warehouse/refill in 1",
         ]
     return "\n".join(lines) + "\n", bridged
 

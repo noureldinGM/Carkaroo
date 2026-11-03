@@ -8,8 +8,8 @@ All devices talk through **MQTT** over Wi-Fi, with JSON messages. This is the co
 ```
 station nodes ──┐                          ┌──> cloud broker (HiveMQ Cloud)
                 ├──> Mosquitto (laptop) <──┤      (bridge: factory/# out,
-car (BW20-12F) ─┘        │   ▲             │       factory/ai/request in)
-                         ▼   │             │
+car (BW20-12F) ─┘        │   ▲             │       factory/ai/request,
+                         ▼   │             │       factory/warehouse/refill in)
           AI controller + dashboard (agv_brain)
 ```
 
@@ -25,6 +25,7 @@ car (BW20-12F) ─┘        │   ▲             │       factory/ai/request 
 | `factory/ai/decision` | AI → dashboard | 1 | yes | the latest decision: ranking, factors, reasons, optimizer check |
 | `factory/ai/alerts` | AI → dashboard | 1 | no | warehouse low, obstacle, battery, unreachable station |
 | `factory/ai/request` | dashboard / cloud → AI | 1 | no | manual request `{"material": "B", "station": "S3"}` |
+| `factory/warehouse/refill` | dashboard / cloud → AI | 1 | no | a person restocked a rack: `{"material": "A"}` (back to full) or `{"material": "A", "units": 300}`. The warehouse has no sensor; the AI counts every box the car takes |
 | `factory/sim/control` | dashboard → simulation | 0 | no | simulation only: obstacles, stock changes, battery |
 
 ## Messages

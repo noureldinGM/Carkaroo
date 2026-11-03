@@ -32,17 +32,19 @@ AI_STATE = f"{PREFIX}/ai/state"         # what the AI believes about the factory
 AI_ALERTS = f"{PREFIX}/ai/alerts"
 AI_REQUEST = f"{PREFIX}/ai/request"     # manual request, e.g. from the dashboard
 SIM_CONTROL = f"{PREFIX}/sim/control"   # simulation only: obstacles, stock changes
+WAREHOUSE_REFILL = f"{PREFIX}/warehouse/refill"  # a person restocked the warehouse (no sensor there)
 
 
 def set_prefix(prefix: str) -> None:
     """Use another topic root. Tests use their own, so they never disturb a running factory."""
-    global PREFIX, AI_DECISION, AI_STATE, AI_ALERTS, AI_REQUEST, SIM_CONTROL
+    global PREFIX, AI_DECISION, AI_STATE, AI_ALERTS, AI_REQUEST, SIM_CONTROL, WAREHOUSE_REFILL
     PREFIX = prefix
     AI_DECISION = f"{PREFIX}/ai/decision"
     AI_STATE = f"{PREFIX}/ai/state"
     AI_ALERTS = f"{PREFIX}/ai/alerts"
     AI_REQUEST = f"{PREFIX}/ai/request"
     SIM_CONTROL = f"{PREFIX}/sim/control"
+    WAREHOUSE_REFILL = f"{PREFIX}/warehouse/refill"
 
 
 def route_dict(route: Route) -> dict:

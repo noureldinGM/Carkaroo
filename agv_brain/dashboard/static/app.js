@@ -37,6 +37,10 @@ function sv(tag, attrs = {}, parent = null) {
   if (parent) parent.appendChild(e);
   return e;
 }
+// replace the contents only when they changed, so buttons inside are not swapped mid-click
+function setHtml(el, html) {
+  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
+}
 const chip = (m, cls = "") => `<span class="mat ${esc(m)} ${cls}" aria-label="material ${esc(m)}">${esc(m)}</span>`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 async function post(url, body) {
@@ -308,6 +312,7 @@ function renderHero(dec, state) {
       <h1>Can't serve the waiting request${waiting > 1 ? "s" : ""}</h1>
       <p class="why">${plural(waiting, "request")} waiting, but the safety rules stop the car:</p>
       <ul class="blocked">${reasons.map((a) => `<li>${esc(a)}</li>`).join("") || "<li>Checking again…</li>"}</ul>
+      ${reasons.some((a) => a.startsWith("Warehouse")) ? `<p class="why">Restocked it? Press <b>Refilled</b> on the <a href="#stations">Stations page</a>.</p>` : ""}
       <p class="car">${esc(carSentence(state))}</p>` : `
       <div class="label">The AI's choice</div>
       <h1>All stocked up</h1>
@@ -379,14 +384,15 @@ function renderStations(state) {
   }).join("");
 
   const low = layout.warehouse_low_boxes ?? 3;
-  $("#warehouse").innerHTML = Object.entries(layout.materials).map(([m, info]) => {
+  setHtml($("#warehouse"), Object.entries(layout.materials).map(([m, info]) => {
     const units = Math.max(0, state.warehouse[m] ?? 0), boxes = Math.floor(units / info.box);
     const cls = boxes < 1 ? "empty" : boxes < low ? "low" : "";
     const note = boxes < 1 ? "Empty: reorder" : boxes < low ? "Low: reorder soon" : `rack ${esc(info.rack)}`;
     return `<div class="rack ${cls}">${chip(m, "big")}<div>
       <b>${boxes} ${boxes === 1 ? "box" : "boxes"}</b>
-      <span>${units} ${esc(info.name.toLowerCase())}</span><br><span class="state">${note}</span></div></div>`;
-  }).join("");
+      <span>${units} ${esc(info.name.toLowerCase())}</span><br><span class="state">${note}</span></div>
+      <button class="ghost small" data-refill="${esc(m)}" title="Someone restocked rack ${esc(info.rack)}: back to ${info.full} units">Refilled</button></div>`;
+  }).join(""));
 }
 
 // ---------- AI ----------
@@ -438,7 +444,7 @@ function renderAI(dec, state) {
 
 // ---------- History ----------
 const ICON = { request: "+", task: "→", pickup: "↑", delivered: "✓", obstacle: "!", reroute: "↺",
-  clear: "✓", charge: "⚡", charging: "⚡", unblock: "↺", info: "•" };
+  clear: "✓", charge: "⚡", charging: "⚡", unblock: "↺", refill: "▤", info: "•" };
 function shortText(e) {
   // the long "why" is on the Now and AI pages: keep the history short
   return e.type === "task" ? e.text.split(" first.")[0] + " first" : e.type === "request" ? e.text.split(":")[0] : e.text;
@@ -459,6 +465,13 @@ function setLink(ok, state) {
 
 // ---------- Try it ----------
 function buildControls() {
+  // the warehouse has no sensor: a person presses "Refilled" after restocking a rack
+  $("#warehouse").addEventListener("click", async (ev) => {
+    const b = ev.target.closest("[data-refill]");
+    if (!b) return;
+    const m = b.dataset.refill, info = layout.materials[m];
+    if (await post("/api/refill", { material: m })) toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
+  });
   const stationOpts = Object.entries(layout.stations).map(([id, s]) => `<option value="${esc(id)}">${esc(s.name)} (${esc(id)})</option>`).join("");
   $("#controls").innerHTML = `
     <div class="ctl"><h3>Ask for a delivery</h3>
