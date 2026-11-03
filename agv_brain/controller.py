@@ -126,7 +126,8 @@ class Controller:
     def on_status(self, topic: str, msg: dict) -> None:
         with self._lock:
             self.car_mode = msg.get("state", "IDLE")
-            self.car_seen = self.clock.now()
+            # OFFLINE comes from the car's MQTT "last will" (or a stopped simulation)
+            self.car_seen = -1e9 if self.car_mode == "OFFLINE" else self.clock.now()
             if "battery" in msg:
                 self.state.car = replace(self.state.car, battery_pct=float(msg["battery"]))
 

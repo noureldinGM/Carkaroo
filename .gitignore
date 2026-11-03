@@ -7,6 +7,9 @@ __pycache__/
 # Generated data (recreate with scripts/generate_dataset.py and scripts/train_live.py)
 data/generated/
 
+# Device keys and the website's saved mode (secret / this laptop only)
+config/*.local.yaml
+
 # Run logs (readings, decisions, events of each run)
 logs/
 

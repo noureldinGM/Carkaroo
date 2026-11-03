@@ -3,6 +3,7 @@
 Two implementations with the same interface:
     MemoryBus   everything in one Python process (simulation, tests, demos)
     MqttBus     a real MQTT broker (Mosquitto on the laptop), for real hardware
+plus ScopedBus, one session's removable view of either.
 
 Messages are JSON objects. Topics follow docs/protocol.md, e.g.
     factory/station/S3/stock      factory/car/AGV-1/cmd
@@ -87,6 +88,10 @@ class MemoryBus:
         for t, p in retained:
             self._queue.put((t, p, handler))
 
+    def unsubscribe(self, handler: Handler) -> None:
+        with self._lock:
+            self._subs = [(p, h) for p, h in self._subs if h is not handler]
+
     def _run(self) -> None:
         while True:
             item = self._queue.get()
@@ -135,6 +140,8 @@ class MqttBus:
         self._broker_filters: set[str] = set()   # what the broker is asked for, never overlapping
         self._lock = threading.Lock()
         self._connected = threading.Event()
+        self._answered = threading.Event()
+        self._refused: str | None = None
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
         if username:
             self.client.username_pw_set(username, password)
@@ -145,10 +152,19 @@ class MqttBus:
         self.client.on_disconnect = lambda *a: self._connected.clear()
         self.client.connect(host, port, keepalive=30)
         self.client.loop_start()
-        if not self._connected.wait(connect_timeout):
+        if not self._answered.wait(connect_timeout) or self._refused:
+            self.client.loop_stop()
+            self.client.disconnect()
+            if self._refused:
+                raise ConnectionError(f"the MQTT broker at {host}:{port} refused the login ({self._refused})")
             raise ConnectionError(f"no MQTT broker answered at {host}:{port}")
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
+        if reason_code.is_failure:          # e.g. a wrong or missing device key
+            self._refused = str(reason_code)
+            self._answered.set()
+            return
+        self._answered.set()
         with self._lock:
             filters = set(self._broker_filters)
         for f in filters:  # re-subscribe after a reconnect
@@ -184,9 +200,48 @@ class MqttBus:
         for f in replaced:
             self.client.unsubscribe(f)
 
+    def unsubscribe(self, handler: Handler) -> None:
+        with self._lock:
+            self._subs = [(p, h) for p, h in self._subs if h is not handler]
+
     def flush(self, timeout: float = 5.0) -> None:
         time.sleep(0.2)
 
     def close(self) -> None:
         self.client.loop_stop()
         self.client.disconnect()
+
+
+class ScopedBus:
+    """One session's view of a shared bus. close() removes every handler the session
+    added and drops anything it still publishes, so a stopped session (its controller,
+    a simulated car still finishing a move) can never disturb the next one."""
+
+    def __init__(self, bus):
+        self.inner = bus
+        self._handlers: list[Handler] = []
+        self._closed = False
+
+    def publish(self, topic: str, payload: dict, qos: int = 0, retain: bool = False) -> None:
+        if not self._closed:
+            self.inner.publish(topic, payload, qos=qos, retain=retain)
+
+    def subscribe(self, pattern: str, handler: Handler) -> None:
+        if self._closed:
+            return
+
+        def scoped(topic: str, payload: dict) -> None:
+            if not self._closed:
+                handler(topic, payload)
+
+        self._handlers.append(scoped)
+        self.inner.subscribe(pattern, scoped)
+
+    def flush(self, timeout: float = 5.0) -> None:
+        self.inner.flush(timeout)
+
+    def close(self) -> None:
+        self._closed = True
+        for h in self._handlers:
+            self.inner.unsubscribe(h)
+        self._handlers.clear()

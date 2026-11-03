@@ -57,7 +57,11 @@ def main() -> None:
     if args.mqtt:
         from agv_brain.bus import MqttBus
         host, _, port = args.mqtt.partition(":")
-        bus = MqttBus(host, int(port or 1883), client_id="capstone-sim")
+        from agv_brain.broker import BRAIN, load_keys
+        from agv_brain.models import load_settings
+        # the AI's own key: needed by the secure broker, ignored by an open one
+        keys = load_keys(["AGV-1", *load_settings().stations])
+        bus = MqttBus(host, int(port or 1883), client_id="capstone-sim", username=BRAIN, password=keys[BRAIN])
     sim = FactorySim(policy=args.policy, speed=args.speed, seed=args.seed, bus=bus, battery=args.battery)
 
     from agv_brain.dashboard import DashboardServer

@@ -20,12 +20,13 @@ sys.path.insert(0, str(ROOT))
 
 import yaml  # noqa: E402
 
+from agv_brain.broker import BRAIN, load_keys  # noqa: E402
 from agv_brain.bus import Clock, MqttBus  # noqa: E402
 from agv_brain.controller import Controller  # noqa: E402
 from agv_brain.dashboard import DashboardServer  # noqa: E402
 from agv_brain.dispatcher import POLICIES, Dispatcher  # noqa: E402
 from agv_brain.eventlog import EventLog  # noqa: E402
-from agv_brain.models import CarState  # noqa: E402
+from agv_brain.models import CarState, load_settings  # noqa: E402
 from agv_brain.sim_devices import SimulatedCar, SimulatedStation  # noqa: E402
 from agv_brain.simulator import load_context  # noqa: E402
 
@@ -43,7 +44,9 @@ def main() -> None:
 
     host, _, port = args.broker.partition(":")
     try:
-        bus = MqttBus(host, int(port or 1883), client_id="capstone-controller")
+        keys = load_keys([cfg.get("car_id", "AGV-1"), *load_settings().stations])
+        bus = MqttBus(host, int(port or 1883), client_id="capstone-controller",
+                      username=BRAIN, password=keys[BRAIN])
     except (ConnectionError, OSError) as exc:
         sys.exit(f"{exc}. Start the broker first: python scripts/start_broker.py")
     clock = Clock(1.0)

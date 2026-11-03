@@ -12,7 +12,7 @@ and the whole plan adds travel_weight * (finish time of the last delivery).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -29,7 +29,17 @@ class Context:
 def load_context(layout=None, materials=None) -> Context:
     """Context from the config files (defaults: config/factory_layout.yaml, config/materials.yaml)."""
     settings = load_settings(materials)
-    return Context(FactoryMap.from_yaml(layout, settings.car), settings)
+    fmap = FactoryMap.from_yaml(layout, settings.car)
+    fit_start_heading(settings, fmap)
+    return Context(fmap, settings)
+
+
+def fit_start_heading(settings: Settings, fmap: FactoryMap) -> None:
+    """The car starts parked at the dock, facing out along the dock's only line,
+    whichever way that line goes on this track."""
+    dock = settings.car.dock
+    if dock in fmap.nodes and len(fmap.neighbors(dock)) == 1:
+        settings.car = replace(settings.car, start_heading=opposite(fmap.arrival_heading(dock)))
 
 
 @dataclass(frozen=True)
