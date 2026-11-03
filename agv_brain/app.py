@@ -66,13 +66,14 @@ class App:
         self.dash = DashboardServer(bus, self.session.controller.ctx, host=host, port=port, app=self)
 
     @classmethod
-    def start(cls, host: str = "127.0.0.1", port: int = 8050, policy: str = "ml") -> "App":
+    def start(cls, host: str = "127.0.0.1", port: int = 8050, policy: str = "ml",
+              mqtt_port: int | None = None) -> "App":
         """Start Mosquitto with device logins and connect the AI to it. If the broker
         cannot start, run the simulation in memory and tell the Setup page why."""
         cfg = yaml.safe_load((CONFIG_DIR / "mqtt.yaml").read_text(encoding="utf-8"))
         car_id = cfg.get("car_id", "AGV-1")
         settings = load_settings()
-        broker = Broker(int(cfg["local"]["port"]), cfg.get("cloud") or {}, [car_id], list(settings.stations))
+        broker = Broker(mqtt_port or int(cfg["local"]["port"]), cfg.get("cloud") or {}, [car_id], list(settings.stations))
         if broker.start():
             bus = MqttBus("localhost", broker.port, client_id="capstone-brain",
                           username=BRAIN, password=broker.keys[BRAIN])
@@ -143,7 +144,11 @@ class App:
     # -- devices -----------------------------------------------------------------
 
     def _on_device(self, topic: str, msg: dict) -> None:
-        self.seen[topic.split("/")[2]] = time.time()
+        device = topic.split("/")[2]
+        if msg.get("state") == "OFFLINE":      # the car's last will, or a stopped simulation
+            self.seen.pop(device, None)
+        else:
+            self.seen[device] = time.time()
 
     def devices(self) -> list[dict]:
         sim_car, sim_stations = MODES[self.mode]

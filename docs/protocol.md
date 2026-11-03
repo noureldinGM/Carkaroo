@@ -2,7 +2,8 @@
 
 All devices talk through **MQTT** over Wi-Fi, with JSON messages. This is the contract between the AI (`agv_brain/controller.py`), the car firmware, the station nodes and the dashboard. The simulated devices in `agv_brain/sim_devices.py` follow it exactly, so the simulation tests it.
 
-- A **local broker** (Mosquitto) runs on the laptop, which is the edge computer that runs the AI. Start it with `python scripts/start_broker.py`. The factory keeps working even if the internet goes down.
+- A **local broker** (Mosquitto) runs on the laptop, which is the edge computer that runs the AI. `python scripts/run_app.py` starts it together with the AI and the website. The factory keeps working even if the internet goes down.
+- **Every device logs in with its own key** (see *Logins* below), like the device credentials of IoT platforms.
 - The local broker is **bridged to a cloud broker** (HiveMQ Cloud free tier, TLS port 8883), as the capstone's "wireless data transfer to the cloud" requires. See [`config/mqtt.yaml`](../config/mqtt.yaml).
 
 ```
@@ -27,6 +28,20 @@ car (BW20-12F) ─┘        │   ▲             │       factory/ai/request,
 | `factory/ai/request` | dashboard / cloud → AI | 1 | no | manual request `{"material": "B", "station": "S3"}` |
 | `factory/warehouse/refill` | dashboard / cloud → AI | 1 | no | a person restocked a rack: `{"material": "A"}` (back to full) or `{"material": "A", "units": 300}`. The warehouse has no sensor; the AI counts every box the car takes |
 | `factory/sim/control` | dashboard → simulation | 0 | no | simulation only: obstacles, stock changes, battery |
+
+## Logins (device keys)
+
+The broker refuses anonymous clients. Each device logs in with **username = its ID** and **password = its key**:
+
+| Username | Who | May publish | May subscribe |
+|---|---|---|---|
+| `AGV-1` | the car | `factory/car/AGV-1/status`, `factory/car/AGV-1/event` | `factory/car/AGV-1/cmd` |
+| `S1` … `S4` | a station node | `factory/station/<id>/stock` | `factory/car/+/event` (to recognize its delivery) |
+| `brain` | the AI and the website | everything under `factory/` | everything under `factory/` |
+
+Keys are random (16 characters), kept in `config/devices.local.yaml` (never committed), and shown on the website's Setup page on the laptop. *New key* changes one at once: the broker reloads and the old key stops working. The rules come from `agv_brain/broker.py` (`acl_text`).
+
+The car should set an MQTT **last will**: topic `factory/car/AGV-1/status`, retained, payload `{"state": "OFFLINE"}`. If its Wi-Fi drops, the broker publishes it, and the AI and the website show the car offline at once instead of after 5 s.
 
 ## Messages
 

@@ -1,5 +1,6 @@
 // Capstone AVG live dashboard: polls /api/snapshot and draws what the AI sees and decides.
-// Five pages (Now, Stations, AI, History, Try it); only the open page is redrawn.
+// Pages: Now, Stations, AI, History, Try it, and Setup (simulation or real factory).
+// Only the open page is redrawn.
 "use strict";
 
 const $ = (s) => document.querySelector(s);
@@ -7,10 +8,12 @@ const SVGNS = "http://www.w3.org/2000/svg";
 const OUT = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 const ANGLE = { N: -90, E: 0, S: 90, W: 180 };
 const SPUR = 26;              // gap between a line end and its box, in map units
-const PAGES = ["now", "stations", "ai", "history", "try"];
+const PAGES = ["now", "stations", "ai", "history", "try", "setup"];
 
 let layout = null;
-let sim = false;
+let simCar = false;            // the car is simulated: obstacle and battery controls
+let simStations = false;       // the stations are simulated: stock control
+let layoutVersion = -1;
 let page = "now";
 let nodes = {};
 let map = {};                 // svg layers and per-node box elements
@@ -76,9 +79,10 @@ function route() {
   if (layout) {
     (page === "try" ? $("#slot-try") : $("#slot-now")).appendChild(svg);
     svg.classList.add("placed");
-    svg.classList.toggle("clickable", sim && page === "try");
+    svg.classList.toggle("clickable", simCar && page === "try");
   }
   if (lastSnap) render(lastSnap);
+  if (page === "setup") loadSetup();
 }
 window.addEventListener("hashchange", route);
 
@@ -146,7 +150,7 @@ function buildMap() {
     const line = sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "track" }, g);
     const hit = sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "hit" }, g);
     hit.addEventListener("click", () => placeObstacle(a, b));
-    hit.addEventListener("mouseenter", () => sim && page === "try" && line.classList.add("hover"));
+    hit.addEventListener("mouseenter", () => simCar && page === "try" && line.classList.add("hover"));
     hit.addEventListener("mouseleave", () => line.classList.remove("hover"));
   }
   for (const raw of layout.nodes) {
@@ -208,11 +212,11 @@ function buildMap() {
   const cargoRect = sv("rect", { x: -11, y: -11, width: 22, height: 22, rx: 5, class: "chip" }, cargo);
   const cargoText = sv("text", { x: 0, y: 4.5, "text-anchor": "middle", class: "chip-text" }, cargo);
   map.car = { g: car, body, cargo, cargoRect, cargoText };
-  $("#try-hint").textContent = sim ? "Click a line to put an obstacle on it" : "Factory floor";
+  $("#try-hint").textContent = simCar ? "Click a line to put an obstacle on it" : "Factory floor";
 }
 
 function placeObstacle(a, b) {
-  if (!sim || page !== "try") return;
+  if (!simCar || page !== "try") return;
   if (!confirm(`Put an obstacle on the line ${a}–${b} for 60 simulated seconds?\nThe car stops there; if it is still blocked, the AI finds another way.`)) return;
   post("/api/sim", { cmd: "obstacle", edge: [a, b], duration_s: 60 });
   obstacles.set(`${a}|${b}`, lastTs + 60);
@@ -241,6 +245,7 @@ function renderMap(state) {
   map.marks.innerHTML = "";
   const task = state.car.task;
   const pts = (path) => path.map((id) => `${nodes[id].x},${nodes[id].y}`).join(" ");
+  if (task && !task.legs.every((leg) => leg.path.every((id) => nodes[id]))) return;
   if (task) {
     task.legs.forEach((leg, i) => {
       if (i < task.leg) return;
@@ -250,6 +255,7 @@ function renderMap(state) {
   }
   for (const [a, b] of state.blocked) {
     const A = nodes[a], B = nodes[b];
+    if (!A || !B) continue;
     sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "blocked" }, map.marks);
   }
   for (const [key, until] of obstacles) {
@@ -262,6 +268,7 @@ function renderMap(state) {
 
   // car position: along the current line, or at its node
   const car = state.car;
+  if (!nodes[car.node]) return;   // state from the previous track, the new one is on its way
   let x = nodes[car.node].x, y = nodes[car.node].y, heading = car.heading;
   if (task && task.edge) {
     const A = nodes[task.edge[0]], B = nodes[task.edge[1]];
@@ -464,32 +471,35 @@ function setLink(ok, state) {
 }
 
 // ---------- Try it ----------
+// the warehouse has no sensor: a person presses "Refilled" after restocking a rack
+$("#warehouse").addEventListener("click", async (ev) => {
+  const b = ev.target.closest("[data-refill]");
+  if (!b) return;
+  const m = b.dataset.refill, info = layout.materials[m];
+  if (await post("/api/refill", { material: m })) toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
+});
+
 function buildControls() {
-  // the warehouse has no sensor: a person presses "Refilled" after restocking a rack
-  $("#warehouse").addEventListener("click", async (ev) => {
-    const b = ev.target.closest("[data-refill]");
-    if (!b) return;
-    const m = b.dataset.refill, info = layout.materials[m];
-    if (await post("/api/refill", { material: m })) toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
-  });
   const stationOpts = Object.entries(layout.stations).map(([id, s]) => `<option value="${esc(id)}">${esc(s.name)} (${esc(id)})</option>`).join("");
   $("#controls").innerHTML = `
     <div class="ctl"><h3>Ask for a delivery</h3>
       <p>Add a request by hand and see where the AI puts it.</p>
       <div class="row"><select id="rq-st" aria-label="Station">${stationOpts}</select>
         <select id="rq-m" aria-label="Material"></select><button id="rq-go">Request</button></div></div>
-    ${sim ? `
+    ${simStations ? `
     <div class="ctl"><h3>Change a stock reading</h3>
       <p>Pretend a load cell reads a different number. Try a low one.</p>
       <div class="row"><select id="sk-st" aria-label="Station">${stationOpts}</select><select id="sk-m" aria-label="Material"></select>
-        <input id="sk-v" type="number" min="0" value="2" aria-label="Units"><button id="sk-go">Set</button></div></div>
+        <input id="sk-v" type="number" min="0" value="2" aria-label="Units"><button id="sk-go">Set</button></div></div>` : ""}
+    ${simCar ? `
     <div class="ctl"><h3>Low battery</h3>
       <p>Below 20% the AI sends the car to charge before the next delivery.</p>
       <button class="ghost" id="bat">Drain battery to 15%</button></div>
     <div class="ctl"><h3>Obstacle</h3>
       <p>Click a line on the map to block it for 60 s. The car stops, waits 10 s, then the AI finds another way.</p>
       <button class="ghost" id="clr">Remove all obstacles</button></div>`
-    : `<div class="ctl"><h3>Real factory</h3><p>Simulation controls are off: the car and stations are real.</p></div>`}`;
+    : `<div class="ctl"><h3>The real car</h3><p>Test it for real: put something in front of its ultrasonic sensor.
+      After 10 s the AI sends it another way.</p></div>`}`;
   const fill = (stSel, mSel) => {
     const mats = layout.stations[$(stSel).value].materials;
     $(mSel).innerHTML = mats.map((m) => `<option value="${m}">${m} · ${esc(layout.materials[m].name)}</option>`).join("");
@@ -500,17 +510,185 @@ function buildControls() {
     const st = $("#rq-st").value, m = $("#rq-m").value;
     if (await post("/api/request", { material: m, station: st })) toast(`Requested ${m} for ${st}. See where the AI ranks it.`);
   });
-  if (!sim) return;
-  $("#sk-st").addEventListener("change", () => fill("#sk-st", "#sk-m"));
-  fill("#sk-st", "#sk-m");
-  $("#sk-go").addEventListener("click", async () => {
-    const v = Number($("#sk-v").value);
-    if (!Number.isFinite(v) || v < 0) { toast("Enter a stock of 0 or more."); return; }
-    const st = $("#sk-st").value, m = $("#sk-m").value;
-    if (await post("/api/sim", { cmd: "set_stock", station: st, material: m, stock: v })) toast(`${st} now reads ${v} × ${m}.`);
+  if (simStations) {
+    $("#sk-st").addEventListener("change", () => fill("#sk-st", "#sk-m"));
+    fill("#sk-st", "#sk-m");
+    $("#sk-go").addEventListener("click", async () => {
+      const v = Number($("#sk-v").value);
+      if (!Number.isFinite(v) || v < 0) { toast("Enter a stock of 0 or more."); return; }
+      const st = $("#sk-st").value, m = $("#sk-m").value;
+      if (await post("/api/sim", { cmd: "set_stock", station: st, material: m, stock: v })) toast(`${st} now reads ${v} × ${m}.`);
+    });
+  }
+  if (simCar) {
+    $("#bat").addEventListener("click", async () => { if (await post("/api/sim", { cmd: "set_battery", value: 15 })) toast("Battery set to 15%."); });
+    $("#clr").addEventListener("click", async () => { if (await post("/api/sim", { cmd: "clear_obstacles" })) { obstacles.clear(); toast("Obstacles removed."); } });
+  }
+}
+
+// ---------- Setup ----------
+const MODE_INFO = {
+  sim: ["Simulation", "Everything is simulated: the car, the stations and their load cells. Good for practice and demos."],
+  real_car: ["Real car", "Your car drives on the real track. The stations are simulated until the load cells are built."],
+  real: ["Real factory", "The real car and the real station nodes. Nothing is simulated."],
+};
+let setup = null;           // last /api/setup answer
+let setupShape = "";        // what the Setup page was built for (rebuilt only when it changes)
+const shownKeys = new Set();
+
+async function postJson(url, body) {
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  let data = {};
+  try { data = await r.json(); } catch (e) { /* empty answer */ }
+  return { ok: r.ok, data };
+}
+
+function agoText(s) {
+  if (s === null || s === undefined) return "never seen";
+  return s < 60 ? `${Math.max(1, Math.round(s))} s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : "over an hour ago";
+}
+
+async function loadSetup() {
+  try {
+    const r = await fetch("/api/setup", { cache: "no-store" });
+    if (!r.ok) return;
+    setup = await r.json();
+  } catch (e) { return; }
+  const shape = JSON.stringify([setup.mode, setup.track, setup.speed, setup.local, setup.broker.ok,
+    setup.tracks.map((x) => x.id), setup.devices.map((d) => [d.id, d.key, d.simulated])]);
+  if (shape !== setupShape) { setupShape = shape; buildSetup(); }
+  updateDevices();
+}
+
+function buildSetup() {
+  const s = setup, b = s.broker;
+  const readOnly = !s.local;
+  $("#setup-note").innerHTML = (!b.ok ? `<div class="alert"><b>Only the simulation can run right now.</b> ${esc(b.error || "")}</div>` : "")
+    + (readOnly ? `<div class="alert">You are looking from another device, so this page is read-only and the keys are hidden.
+        Make changes on the laptop.</div>` : "");
+  const trackOpts = s.tracks.map((x) => `<option value="${esc(x.id)}"${x.id === s.track ? " selected" : ""}>${esc(x.name)}</option>`).join("");
+  $("#setup-mode").innerHTML = `
+    <div class="modes" role="radiogroup" aria-label="Factory mode">
+      ${Object.entries(MODE_INFO).map(([id, [name, about]]) => {
+        const off = id !== "sim" && !b.ok;
+        return `<label class="mode${id === s.mode ? " on" : ""}${off ? " off" : ""}">
+          <input type="radio" name="mode" value="${id}"${id === s.mode ? " checked" : ""}${off || readOnly ? " disabled" : ""}>
+          <b>${name}</b><span>${about}</span></label>`;
+      }).join("")}
+    </div>
+    <div class="row mode-row">
+      <label>Track <select id="set-track"${readOnly ? " disabled" : ""}>${trackOpts}</select></label>
+      <label id="speed-wrap">Speed <input id="set-speed" type="range" min="1" max="20" step="1" value="${s.speed}"${readOnly ? " disabled" : ""}>
+        <span id="speed-val">x${s.speed}</span></label>
+      <button id="set-apply"${readOnly ? " disabled" : ""}>Apply</button>
+    </div>
+    <p class="hint">Now running: <b>${esc(s.mode_name)}</b> on <b>${esc((s.tracks.find((x) => x.id === s.track) || {}).name || s.track)}</b>.
+      Applying restarts the AI in a few seconds; the website stays open.</p>`;
+  const speedShown = () => { $("#speed-wrap").hidden = document.querySelector('input[name="mode"]:checked').value !== "sim"; };
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", () => {
+    document.querySelectorAll(".mode").forEach((m) => m.classList.toggle("on", m.querySelector("input").checked));
+    speedShown();
+  }));
+  speedShown();
+  $("#set-speed").addEventListener("input", () => { $("#speed-val").textContent = `x${$("#set-speed").value}`; });
+  $("#set-apply").addEventListener("click", async () => {
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const btn = $("#set-apply");
+    btn.disabled = true; btn.textContent = "Switching…";
+    const r = await postJson("/api/mode", { mode, track: $("#set-track").value, speed: Number($("#set-speed").value) });
+    btn.disabled = false; btn.textContent = "Apply";
+    toast(r.ok ? `Now running: ${MODE_INFO[mode][0]}.` : (r.data.error || "Could not switch."));
+    setupShape = "";
+    loadSetup();
   });
-  $("#bat").addEventListener("click", async () => { if (await post("/api/sim", { cmd: "set_battery", value: 15 })) toast("Battery set to 15%."); });
-  $("#clr").addEventListener("click", async () => { if (await post("/api/sim", { cmd: "clear_obstacles" })) { obstacles.clear(); toast("Obstacles removed."); } });
+
+  const addr = b.addresses.length ? b.addresses.join(" or ") : "this laptop's IP address";
+  $("#setup-devices").innerHTML = `<ul class="devices">${s.devices.map((d) => `
+    <li class="device" data-dev="${esc(d.id)}">
+      <div class="dev-row">
+        <span class="dev-dot" aria-hidden="true"></span>
+        <span class="dev-name"><b>${esc(d.kind === "car" ? `Car ${d.id}` : `${d.id} · ${d.name}`)}</b>
+          <span class="dev-state"></span></span>
+        ${d.simulated ? `<span class="tag sim">simulated</span>` : `<span class="tag real">real</span>`}
+        <button class="ghost small" data-connect="${esc(d.id)}" aria-expanded="false">Connect</button>
+      </div>
+      <div class="connect" hidden>
+        <dl>
+          <dt>Broker</dt><dd><code>${esc(addr)}</code>, port <code>${b.port ?? 1883}</code></dd>
+          <dt>Username</dt><dd><code>${esc(d.id)}</code></dd>
+          <dt>Key</dt><dd>${d.key ? `<code class="key">${shownKeys.has(d.id) ? esc(d.key) : "••••••••••••"}</code>
+            <button class="ghost small" data-show="${esc(d.id)}">${shownKeys.has(d.id) ? "Hide" : "Show"}</button>
+            <button class="ghost small" data-copy="${esc(d.id)}">Copy</button>
+            <button class="ghost small" data-newkey="${esc(d.id)}">New key</button>`
+            : `<span class="quiet">${b.ok ? "shown on the laptop only" : "no broker running"}</span>`}</dd>
+          <dt>Topics</dt><dd>${d.topics.map((x) => `<code>${esc(x)}</code>`).join(" ")}</dd>
+        </dl>
+        <pre class="snippet">// in the firmware, when connecting to MQTT
+client.connect("${esc(d.id)}", "${esc(d.id)}", "&lt;key&gt;");${d.kind === "car" ? `
+// last will, so the website shows the car offline at once if it drops:
+//   topic factory/car/${esc(d.id)}/status, retained, payload {"state":"OFFLINE"}` : ""}</pre>
+      </div>
+    </li>`).join("")}</ul>`;
+
+  const cur = s.tracks.find((x) => x.id === s.track) || { id: s.track, name: s.track };
+  $("#setup-track").innerHTML = `
+    <p>The AI and the simulated car use <b>${esc(cur.name)}</b>. Draw your real track with its measurements in cm;
+      the editor checks it before it can be used.</p>
+    <div class="row"><button id="edit-track"${readOnly ? " disabled" : ""}>Edit this track</button>
+      <button class="ghost" id="new-track"${readOnly ? " disabled" : ""}>Start an empty track</button></div>`;
+  $("#edit-track").addEventListener("click", async () => {
+    const r = await fetch(`/api/track/${encodeURIComponent(s.track)}`);
+    if (r.ok) TrackEditor.open(await r.json(), cur.id === "sample" ? "" : cur.name);
+  });
+  $("#new-track").addEventListener("click", () => TrackEditor.open({ nodes: {}, edges: [] }, ""));
+}
+
+$("#setup-devices").addEventListener("click", async (ev) => {
+  const t = ev.target.closest("button");
+  if (!t || !setup) return;
+  const dev = (id) => setup.devices.find((d) => d.id === id);
+  if (t.dataset.connect) {
+    const box = t.closest(".device").querySelector(".connect");
+    box.hidden = !box.hidden;
+    t.setAttribute("aria-expanded", String(!box.hidden));
+  } else if (t.dataset.show) {
+    const id = t.dataset.show;
+    if (shownKeys.has(id)) shownKeys.delete(id); else shownKeys.add(id);
+    t.closest("dd").querySelector(".key").textContent = shownKeys.has(id) ? dev(id).key : "••••••••••••";
+    t.textContent = shownKeys.has(id) ? "Hide" : "Show";
+  } else if (t.dataset.copy) {
+    try { await navigator.clipboard.writeText(dev(t.dataset.copy).key); toast("Key copied."); }
+    catch (e) { toast("Copy did not work: press Show and copy it by hand."); }
+  } else if (t.dataset.newkey) {
+    const id = t.dataset.newkey;
+    if (!confirm(`Make a new key for ${id}? The old key stops working at once, so ${id} needs the new one in its firmware.`)) return;
+    const r = await postJson(`/api/device/${encodeURIComponent(id)}/key`, {});
+    toast(r.ok ? `New key for ${id}.` : (r.data.error || "Could not make a new key."));
+    shownKeys.add(id);
+    setupShape = "";
+    await loadSetup();
+    const box = document.querySelector(`.device[data-dev="${CSS.escape(id)}"] .connect`);
+    if (box) box.hidden = false;
+  }
+});
+
+function updateDevices() {
+  for (const d of setup.devices) {
+    const li = document.querySelector(`.device[data-dev="${CSS.escape(d.id)}"]`);
+    if (!li) continue;
+    li.classList.toggle("online", d.online);
+    li.querySelector(".dev-state").textContent = d.simulated ? (d.online ? "simulated · running" : "simulated · starting")
+      : d.online ? `online · last message ${agoText(d.last_seen_s)}` : `offline · ${agoText(d.last_seen_s)}`;
+  }
+}
+
+function setMode(d) {
+  const pill = $("#mode-pill");
+  pill.hidden = !d.mode;
+  $(".tab-setup").hidden = !d.setup;
+  if (!d.mode) return;
+  pill.textContent = (MODE_INFO[d.mode.id] || [d.mode.name])[0];
+  pill.className = `mode-pill ${d.mode.id === "sim" ? "sim" : "real"}`;
 }
 
 // ---------- main loop ----------
@@ -524,14 +702,29 @@ function render(d) {
   else if (page === "history") renderHistory(state);
 }
 
+// the Setup page has its own, slower poll
+setInterval(() => { if (page === "setup" && !TrackEditor.isOpen()) loadSetup(); }, 1000);
+
 async function poll() {
   try {
     const r = await fetch("/api/snapshot", { cache: "no-store" });
     const d = await r.json();
-    if (!layout) {
-      layout = d.layout; sim = d.sim;
-      buildMap(); buildControls(); route();
+    const parts = d.sim_parts || { car: d.sim, stations: d.sim };
+    if (!layout || d.layout_version !== layoutVersion || parts.car !== simCar || parts.stations !== simStations) {
+      // first load, a new track or a new mode: rebuild the map and the controls
+      const first = !layout;
+      layout = d.layout; layoutVersion = d.layout_version;
+      simCar = parts.car; simStations = parts.stations;
+      nodes = {}; obstacles.clear();
+      buildMap(); buildControls();
+      if (first) route();
+      else {
+        (page === "try" ? $("#slot-try") : $("#slot-now")).appendChild($("#map"));
+        $("#map").classList.add("placed");
+        $("#map").classList.toggle("clickable", simCar && page === "try");
+      }
     }
+    setMode(d);
     if (d.state) {
       lastTs = d.state.ts;
       lastSnap = d;

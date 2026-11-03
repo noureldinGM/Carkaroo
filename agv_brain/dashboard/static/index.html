@@ -32,8 +32,10 @@
         <a href="#ai" data-tab="ai">AI</a>
         <a href="#history" data-tab="history">History</a>
         <a href="#try" data-tab="try">Try it</a>
+        <a href="#setup" data-tab="setup" class="tab-setup" hidden>Setup</a>
       </nav>
       <div class="status">
+        <a id="mode-pill" class="mode-pill" href="#setup" hidden></a>
         <span id="clock" class="clock" title="Factory time">--:--</span>
         <span id="link" class="link off">Connecting…</span>
       </div>
@@ -98,11 +100,37 @@
         </div>
       </div>
     </section>
+
+    <!-- Setup: simulation or real factory, device keys, the track -->
+    <section class="page" data-page="setup" aria-label="Setup" hidden>
+      <h1 class="page-title">Setup</h1>
+      <p class="page-sub">Choose what this website runs: the simulation or your real factory. Connect the real
+        car and stations with their keys, and draw your own track.</p>
+      <div id="setup-note"></div>
+      <div class="setup-grid">
+        <section class="ctl" aria-labelledby="mode-title">
+          <h3 id="mode-title">Factory mode</h3>
+          <div id="setup-mode"></div>
+        </section>
+        <section class="ctl" aria-labelledby="dev-title">
+          <h3 id="dev-title">Devices</h3>
+          <p>Each device logs in to the laptop's broker with its own key. A device turns green as soon as it sends
+            its first message.</p>
+          <div id="setup-devices"></div>
+        </section>
+      </div>
+      <section class="ctl track-card" aria-labelledby="trk-title">
+        <h3 id="trk-title">Track</h3>
+        <div id="setup-track"></div>
+        <div id="editor" hidden></div>
+      </section>
+    </section>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <svg id="map" class="map" role="img" aria-label="Factory floor with the track, stations, racks and the car"></svg>
   <script src="/static/app.js"></script>
+  <script src="/static/editor.js"></script>
 </body>
 </html>

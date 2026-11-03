@@ -6,6 +6,9 @@
 
 ## What the car must do
 1. Join Wi-Fi and connect to the MQTT broker on the laptop. Subscribe to `factory/car/AGV-1/cmd`; publish `status` and `event` (see [docs/protocol.md](../docs/protocol.md)).
+   - **Log in** with username `AGV-1` and the car's key from the website's Setup page (Devices → Car AGV-1 → Connect). Without it the broker refuses the car.
+   - Set a **last will**: topic `factory/car/AGV-1/status`, retained, payload `{"state":"OFFLINE"}`.
+   - If the connection drops, reconnect every few seconds. The broker restarts when a key changes.
 2. **Line following** with the IR sensor array, using a PID controller on the line position to set the two motor speeds.
 3. **Junction counting:** when all sensors see black (a junction) or the stop marker appears, run the next command (`STRAIGHT`, `LEFT`, `RIGHT`, `UTURN`, `STOP`) and publish a `node` event.
 4. **Fork:** on `LIFT`/`LOWER`, drive the servo to the calibrated angles, then publish `done`.

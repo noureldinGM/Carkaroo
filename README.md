@@ -45,7 +45,11 @@ python -m venv .venv
 ```bash
 .venv\Scripts\python -m pip install -r requirements.txt
 ```
-See the AI run a simulated factory, with the live dashboard at http://localhost:8050:
+Start everything (MQTT broker with device keys, the AI, the website at http://localhost:8050). The **Setup** page switches between the simulation and the real car, shows each device's key, and has a track editor:
+```bash
+.venv\Scripts\python scripts\run_app.py
+```
+Only the simulated factory, without a broker:
 ```bash
 .venv\Scripts\python scripts\run_factory_sim.py
 ```
@@ -138,14 +142,9 @@ tests/             pytest suite
 
 ## Real car and cloud
 
-The AI and the dashboard only talk MQTT ([docs/protocol.md](docs/protocol.md)), so the real car and stations plug in without changes once their firmware sends those messages:
-```bash
-.venv\Scripts\python scripts\start_broker.py
-```
-```bash
-.venv\Scripts\python scripts\run_controller.py --sim-stations
-```
-This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). The whole simulated factory already runs through Mosquitto on this laptop (`run_factory_sim.py --mqtt localhost:1883`). For the car to connect over Wi-Fi, and for the cloud bridge, see [docs/project-plan.md](docs/project-plan.md), Phase 2.
+The AI and the website only talk MQTT ([docs/protocol.md](docs/protocol.md)), so the real car and stations plug in without changes. Run `scripts/run_app.py`, choose **Real car** on the Setup page, and put the car's key (Setup → Devices → Connect) in its firmware. Every device has its own key, and the broker refuses anyone else. Draw your real track in the Setup page's editor; no retraining is needed.
+
+This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). Its Windows service only listens on the laptop, so stop it once as administrator (`Stop-Service mosquitto`, `Set-Service mosquitto -StartupType Manual`); see [docs/dashboard.md](docs/dashboard.md). For the cloud bridge, see [docs/project-plan.md](docs/project-plan.md), Phase 2.
 
 ## Documents
 - [Project plan and roadmap](docs/project-plan.md)
