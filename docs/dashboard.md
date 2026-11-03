@@ -30,8 +30,10 @@ So far it has run with the simulated car, both inside one program and through a 
 - what the car is doing right now;
 - the **queue**: every waiting request in the AI's order, with "runs out in …" (red when it is urgent).
 
+If requests are waiting but none can be served (for example the warehouse has less than one box left, or a line is blocked), the top says *"Can't serve the waiting requests"* and lists the reasons.
+
 **Show the AI's numbers** (click it) opens the details for the judges:
-- the AI score of each request (from the ML ranker);
+- the AI score of each request, from the ML ranker: how many of the other requests it should go before. *"3.8 of 4"* means it beats about 3.8 of the 4 others. The highest goes first, and the AI decides again after every delivery;
 - slack (empty-in minus trip; red when negative);
 - the optimizer's "cost if first", with ★ on the best;
 - the "what if another request went first" comparisons.

@@ -1,7 +1,7 @@
 """Hard rules that are checked before the ML ranker is asked anything.
 
 The ML only orders deliveries that are actually possible and safe:
-  - the warehouse must have the material,
+  - the warehouse must have at least one full box of the material,
   - the station must have room for a full box,
   - the station must be reachable (lines blocked by obstacles are avoided),
   - the car must have enough battery, otherwise it charges first.
@@ -28,9 +28,11 @@ def filter_jobs(ctx: Context, state: FactoryState, jobs: list[Job]) -> SafetyRes
     for job in jobs:
         material = s.materials[job.material]
         station = state.stations[job.station].materials[job.material]
-        if state.warehouse.get(job.material, 0) < 1:
-            alerts.append(f"Warehouse is out of {job.material} ({material.name}): "
-                          f"cannot serve {job.station}. Reorder from the supplier.")
+        left = state.warehouse.get(job.material, 0)
+        if left < material.delivery_qty:
+            alerts.append(f"Warehouse is out of {job.material} ({material.name}): {left} left, "
+                          f"less than one box of {material.delivery_qty}. Cannot serve {job.station}; "
+                          "reorder from the supplier.")
             continue
         if station.capacity - job.stock < material.delivery_qty:
             alerts.append(f"{job.station} has no room for a full box of {job.material} "
