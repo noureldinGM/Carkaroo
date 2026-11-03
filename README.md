@@ -19,6 +19,7 @@ A small automated guided vehicle (AGV) carries material boxes around a factory f
    It picks the delivery that keeps production running. Hard safety rules come first: warehouse stock, room for a box, battery, and blocked lines.
 5. **Routing:** the path planner turns the route into one command per junction (`STRAIGHT`, `LEFT`, `RIGHT`, `UTURN`, `STOP`), followed by `LIFT` or `LOWER` for the fork.
 6. **Explaining:** every decision comes with reasons and a "what if the other one went first" comparison.
+7. **Live dashboard:** a web page on the laptop shows the AI's choice, why, the queue, the car on the factory map, and the station stock, live ([docs/dashboard.md](docs/dashboard.md)).
 
 See [docs/architecture.md](docs/architecture.md) for the diagrams.
 
@@ -26,12 +27,13 @@ See [docs/architecture.md](docs/architecture.md) for the diagrams.
 
 | | ML ranker | Weighted rules (hand-made) | First come, first served | Exact optimizer |
 |---|---|---|---|---|
-| Picks the best delivery: our track (1000 situations) | **91.5 %** | 61.3 % | 26.2 % | 100 % |
-| Picks the best delivery: 200 new factory layouts | **91.3 %** | 57.7 % | 27.3 % | 100 % |
-| Extra cost vs the optimal plan (our track) | **1.1 %** | 16.8 % | 149.7 % | 0 % |
-| Decision time | ~20 ms | < 0.1 ms | < 0.1 ms | grows with n! |
+| Picks the best delivery: our track (1000 situations) | **90.6 %** | 61.3 % | 26.2 % | 100 % |
+| Picks the best delivery: 200 new factory layouts | **91.2 %** | 57.7 % | 27.3 % | 100 % |
+| Picks the best delivery: live operation (40 one-hour runs) | **84.2 %** | 46.8 % | 37.7 % | 100 % |
+| Extra cost vs the optimal plan (live operation) | **0.7 %** | 10.3 % | 22.9 % | 0 % |
+| Decision time | ~10 ms | < 0.1 ms | < 0.1 ms | grows with n! |
 
-The ML ranker cuts production stop time by **42 %** compared with first come, first served. Its accuracy clears the capstone's **80 %** target, on our track and on factories it has never seen. Training mixes our track with 400 random factory layouts, so a new or changed track needs no retraining. Full report: [reports/evaluation.md](reports/evaluation.md).
+The ML ranker cuts production stop time by **42 %** compared with first come, first served. Its accuracy clears the capstone's **80 %** target in all three tests: our track, factories it has never seen, and live operation, where it runs the factory itself. It was trained on our track, 400 random factory layouts, and 18,000 situations from live operation (DAgger), so a new or changed track needs no retraining. Full report: [reports/evaluation.md](reports/evaluation.md).
 
 ![Accuracy by number of requests](reports/accuracy_by_requests.png)
 
@@ -43,17 +45,26 @@ python -m venv .venv
 ```bash
 .venv\Scripts\python -m pip install -r requirements.txt
 ```
+See the AI run a simulated factory, with the live dashboard at http://localhost:8050:
+```bash
+.venv\Scripts\python scripts\run_factory_sim.py
+```
+
+Or one decision in the terminal:
 ```bash
 .venv\Scripts\python scripts\demo.py
 ```
 
-The trained model is in `models/ranker.joblib`, so the demo works right away. To rebuild everything from scratch:
+The trained model is in `models/ranker.joblib`, so both work right away. To rebuild everything from scratch (about 15 minutes):
 
 ```bash
 .venv\Scripts\python scripts\generate_dataset.py
 ```
 ```bash
 .venv\Scripts\python scripts\train_ranker.py
+```
+```bash
+.venv\Scripts\python scripts\train_live.py
 ```
 ```bash
 .venv\Scripts\python scripts\evaluate.py
@@ -100,7 +111,9 @@ Other things to try:
 ```
 config/            factory track (nodes, lines) and materials/stations/car settings
 agv_brain/         the AI: map, forecaster, need detector, safety, simulator,
-                   random layouts, optimizer, features, ML ranker, explainer, dispatcher
+                   random layouts, optimizer, features, ML ranker, explainer, dispatcher,
+                   controller, message bus, simulated car and stations
+agv_brain/dashboard/  the live dashboard (web page served by the AI)
 scripts/           demo, dataset generation, training, evaluation, sensitivity
 models/            trained ranker
 data/sample/       sample of the training dataset (the full one is regenerated)
@@ -123,8 +136,20 @@ tests/             pytest suite
 | Laptop | edge computer: MQTT broker + AI |
 | HiveMQ Cloud (planned) | cloud data and dashboard |
 
+## Real car and cloud
+
+The AI and the dashboard only talk MQTT ([docs/protocol.md](docs/protocol.md)), so the real car and stations plug in without changes once their firmware sends those messages:
+```bash
+.venv\Scripts\python scripts\start_broker.py
+```
+```bash
+.venv\Scripts\python scripts\run_controller.py --sim-stations
+```
+This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). The real-network path is written but not yet tested; see [docs/project-plan.md](docs/project-plan.md), Phase 2.
+
 ## Documents
 - [Project plan and roadmap](docs/project-plan.md)
+- [Live dashboard](docs/dashboard.md)
 - [Architecture](docs/architecture.md)
 - [Communication protocol (MQTT)](docs/protocol.md)
 - [Measurable design requirements](docs/design-requirements.md)

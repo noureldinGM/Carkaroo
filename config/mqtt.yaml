@@ -1,0 +1,20 @@
+# MQTT settings.
+#
+# The broker (Mosquitto) runs on this laptop. The car and the station nodes connect
+# to it over Wi-Fi using the laptop's IP address (scripts/start_broker.py prints it).
+
+local:
+  host: localhost
+  port: 1883
+
+car_id: AGV-1
+
+# Cloud mirror: HiveMQ Cloud free tier (https://console.hivemq.cloud).
+# Put your cluster address below. The username and password are NOT stored in
+# this file (it is in git): set them as environment variables before starting
+# the broker, in the same terminal:
+#     $env:HIVEMQ_USERNAME = "your-username"
+#     $env:HIVEMQ_PASSWORD = "your-password"
+cloud:
+  host: ""          # e.g. 0123456789abcdef.s1.eu.hivemq.cloud
+  port: 8883

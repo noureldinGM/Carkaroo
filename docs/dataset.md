@@ -62,8 +62,17 @@ Size of the default dataset: 30,000 situations, 119,343 requests and 413,888 pai
 
 A pair row in `pairs.npz` holds the features of i, the features of j, and their difference (i − j). It adds five pair features: the finish time of each request if the other goes first, how long each would stop the line, and the criticality-weighted difference of those stops.
 
+## Live-operation data (DAgger)
+Random situations don't look like the queues the AI meets when the factory actually runs. `scripts/train_live.py` runs the factory quickly with the current model making the decisions (20 % random choices), on our track and on random layouts. It labels every decision situation with the exact optimizer and retrains on everything collected so far. Two rounds added 18,231 live situations (338,650 pairs).
+
+| File | In git | What it is |
+|---|---|---|
+| `data/sample/live_requests_sample.csv` | yes | the first 300 live situations, one row per request (same columns as above, plus `round`) |
+| `data/generated/live_requests.csv`, `live_pairs.npz` | no | all live situations and their training pairs |
+
 ## Train / test split
 - Training holds out 20 % of the situations, whole situations at a time, for validation (`scripts/train_ranker.py`).
 - The final test (`scripts/evaluate.py`) uses different random seeds from training, with up to **7** requests per situation (training used at most 6). It has two parts:
   - 1000 new situations on our track;
-  - 1000 situations on 200 **factory layouts the model has never seen**.
+  - 1000 situations on 200 **factory layouts the model has never seen**;
+  - 40 one-hour **live factory runs** with the model making every decision (about 1400 decisions checked).

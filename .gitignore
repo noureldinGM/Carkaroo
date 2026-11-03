@@ -4,8 +4,11 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# Generated data (recreate with scripts/generate_dataset.py)
+# Generated data (recreate with scripts/generate_dataset.py and scripts/train_live.py)
 data/generated/
+
+# Run logs (readings, decisions, events of each run)
+logs/
 
 # Editors / OS
 .vscode/

@@ -17,17 +17,17 @@ materials:
   A:
     name: Steel bolts
     rack: W-A
-    warehouse_stock: 200
+    warehouse_stock: 500
     delivery_qty: 20      # units carried in one trip (one box)
   B:
     name: Plastic housings
     rack: W-B
-    warehouse_stock: 150
+    warehouse_stock: 400
     delivery_qty: 15
   C:
     name: Copper wire
     rack: W-C
-    warehouse_stock: 80
+    warehouse_stock: 300
     delivery_qty: 10
 
 stations:
@@ -62,6 +62,7 @@ automation:
   warehouse_low_boxes: 3    # warn to reorder from the supplier below this many boxes
   obstacle_wait_s: 10       # if the ultrasonic sensor still sees an obstacle after
                             # this long, block that line and re-route
+  block_expiry_s: 300       # try a blocked line again after this long
 
 # What the teacher optimizer (and so the trained ranker) tries to minimise.
 cost:

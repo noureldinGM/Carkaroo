@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Capstone AVG · Live factory</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <strong>Capstone AVG</strong>
+        <span class="sub">AI delivery car · live</span>
+      </div>
+    </div>
+    <div class="clock">
+      <span id="clock" class="time">--:--</span>
+      <span id="link" class="pill off" title="Connection">offline</span>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <main class="grid">
+    <section class="card hero" aria-labelledby="ai-title">
+      <h2 id="ai-title" class="sr-only">AI decision</h2>
+      <div id="now"><p class="empty">Waiting for the AI…</p></div>
+      <ol id="queue" class="queue-simple" aria-label="Waiting requests in the AI's order"></ol>
+      <details id="details">
+        <summary>Show the AI's numbers</summary>
+        <div id="ai-numbers"></div>
+      </details>
+    </section>
+
+    <section class="card map-card" aria-labelledby="map-title">
+      <div class="card-head">
+        <h2 id="map-title">Factory floor</h2>
+        <span class="hint" id="map-hint"></span>
+      </div>
+      <svg id="map" role="img" aria-label="Factory map showing the track, stations, racks and the car"></svg>
+      <div class="legend">
+        <span><i class="sw leg0"></i>to the rack</span>
+        <span><i class="sw leg1"></i>to the station</span>
+        <span><i class="sw blk"></i>blocked</span>
+      </div>
+    </section>
+
+    <section class="card stations-card" aria-labelledby="st-title">
+      <div class="card-head"><h2 id="st-title">Stations</h2></div>
+      <div id="stations" class="stations"></div>
+    </section>
+
+    <section class="card feed-card" aria-labelledby="feed-title">
+      <div class="card-head"><h2 id="feed-title">What happened</h2></div>
+      <div id="alerts"></div>
+      <ol id="feed" class="feed"></ol>
+    </section>
+
+    <section class="card controls-card" aria-labelledby="ctl-title">
+      <div class="card-head"><h2 id="ctl-title">Try it</h2></div>
+      <div id="controls" class="controls"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
