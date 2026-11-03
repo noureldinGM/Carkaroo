@@ -141,8 +141,8 @@ def validate(raw: dict, settings: Settings) -> dict:
                 errors.append(f"{nid} is a junction with {k} line{'s' if k != 1 else ''}: a line end must be a "
                               "rack, a station or the dock.")
             elif k == 2:
-                warnings.append(f"{nid} is a corner (2 lines). The car counts it as a junction, so it must be "
-                                "able to detect it (for example a black cross marker).")
+                warnings.append(f"{nid} has only 2 lines. The car counts every junction, so it must be able to "
+                                f"detect {nid} (for example a black cross marker), or delete it.")
         elif t in ("rack", "station", "dock") and k != 1:
             errors.append(f"{nid} is a {t}: it must be the end of exactly one line (it has {k}).")
 

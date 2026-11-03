@@ -24,9 +24,11 @@ def main() -> None:
     ap.add_argument("--port", type=int, default=8050)
     ap.add_argument("--host", default="127.0.0.1", help="0.0.0.0 to also open the website from other devices")
     ap.add_argument("--policy", default="ml", choices=POLICIES)
+    ap.add_argument("--mqtt-port", type=int, default=None,
+                    help="broker port (default from config/mqtt.yaml, 1883); the firmware must use the same")
     args = ap.parse_args()
 
-    app = App.start(host=args.host, port=args.port, policy=args.policy)
+    app = App.start(host=args.host, port=args.port, policy=args.policy, mqtt_port=args.mqtt_port)
     b = app.broker
     if b:
         where = ", ".join(f"{a}:{b.port}" for a in app.setup(True)["broker"]["addresses"]) or f"port {b.port}"
