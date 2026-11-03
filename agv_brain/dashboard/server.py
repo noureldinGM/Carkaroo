@@ -38,7 +38,7 @@ def layout_json(ctx: Context) -> dict:
                           for m in s.materials.values()},
             "stations": {st.id: {"name": st.name, "criticality": st.criticality,
                                  "materials": list(st.materials)} for st in s.stations.values()},
-            "dock": s.car.dock}
+            "dock": s.car.dock, "warehouse_low_boxes": s.automation.warehouse_low_boxes}
 
 
 class DashboardServer:
