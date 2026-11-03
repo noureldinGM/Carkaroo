@@ -1,6 +1,9 @@
 """Generate the training dataset.
 
-    python scripts/generate_dataset.py --scenarios 20000
+    python scripts/generate_dataset.py --scenarios 30000 --random-layouts 400
+
+60 % of the situations come from random factory layouts and 40 % from our track
+(change with --layout-share; --random-layouts 0 = our track only).
 
 Writes:
     data/generated/pairs.npz       pair rows used to train the ranker
@@ -25,8 +28,11 @@ from agv_brain.simulator import load_context  # noqa: E402
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--scenarios", type=int, default=20000)
+    ap.add_argument("--scenarios", type=int, default=30000)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--random-layouts", type=int, default=400, help="random factories to mix in")
+    ap.add_argument("--layout-share", type=float, default=0.6,
+                    help="share of situations taken from the random factories")
     ap.add_argument("--min-n", type=int, default=2, help="fewest requests per scenario")
     ap.add_argument("--max-n", type=int, default=6, help="most requests per scenario")
     ap.add_argument("--out", type=Path, default=ROOT / "data" / "generated")
@@ -34,12 +40,18 @@ def main() -> None:
 
     ctx = load_context()
     t0 = time.perf_counter()
-    ds = generate(ctx, args.scenarios, args.seed, (args.min_n, args.max_n))
+    ds = generate(ctx, args.scenarios, args.seed, (args.min_n, args.max_n),
+                  random_layouts=args.random_layouts, layout_share=args.layout_share)
     took = time.perf_counter() - t0
+    if args.random_layouts:
+        layouts = (f"our track + {args.random_layouts} random layouts "
+                   f"({args.layout_share:.0%} of situations), {args.scenarios} situations")
+    else:
+        layouts = f"our track only, {args.scenarios} situations"
 
     args.out.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(args.out / "pairs.npz", X=ds.X, y=ds.y.astype(int), w=ds.w,
-                        groups=ds.groups, features=np.array(PAIR_FEATURES))
+                        groups=ds.groups, features=np.array(PAIR_FEATURES), layouts=np.array(layouts))
     df = pd.DataFrame(ds.job_rows)
     df.to_csv(args.out / "requests.csv", index=False)
     sample_dir = ROOT / "data" / "sample"
@@ -49,6 +61,7 @@ def main() -> None:
     print(f"{args.scenarios} scenarios, {len(df)} requests, {len(ds.y)} pair rows "
           f"({ds.X.shape[1]} features) in {took:.1f} s")
     print(f"label balance: {ds.y.mean():.3f} (should be ~0.5)")
+    print(f"data: {layouts}")
     print(f"saved to {args.out}")
 
 

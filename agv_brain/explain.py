@@ -7,6 +7,8 @@ from agv_brain.need_detector import fmt_s
 from agv_brain.optimizer import MAX_EXACT, best_order_starting_with, first_choice_costs
 from agv_brain.simulator import Context, Schedule, job_leg, simulate
 
+SAME = 0.5  # cost differences below this are reported as "about the same"
+
 
 def label(ctx: Context, job: Job) -> str:
     st = ctx.settings.stations[job.station]
@@ -39,14 +41,14 @@ def explain(ctx: Context, jobs: list[Job], car: CarState, plan: Schedule) -> lis
         deltas = [(j, stops_alt[j.id] - stops_now.get(j.id, 0.0)) for j in jobs]
         diff = alt.total_cost - plan.total_cost
         head = f"If {label(ctx, other)} went first instead: "
-        if diff > 1e-6:
+        if diff >= SAME:
             worse = [f"{j.station} would stop {fmt_s(d)} longer" for j, d in deltas if d > 0.5]
             if worse:
                 lines.append(head + ", ".join(worse) + f" (cost +{diff:.0f}).")
             else:
                 lines.append(head + "no line would stop, but stations stay below safety stock "
                              f"longer or the car drives more (cost +{diff:.0f}).")
-        elif diff < -1e-6:
+        elif diff <= -SAME:
             better = [f"{j.station} would stop {fmt_s(-d)} less" for j, d in deltas if d < -0.5]
             lines.append(head + "that would be better" + (": " + ", ".join(better) if better else "")
                          + f" (cost {diff:.0f}).")
@@ -56,9 +58,12 @@ def explain(ctx: Context, jobs: list[Job], car: CarState, plan: Schedule) -> lis
     costs = first_choice_costs(ctx, jobs, car)
     best = min(range(len(jobs)), key=costs.__getitem__)
     chosen = next(i for i, j in enumerate(jobs) if j.id == first.id)
-    if costs[chosen] > costs[best] + 1e-6:
+    if costs[chosen] >= costs[best] + SAME:
         lines.append(f"Note: the exact optimizer would start with {label(ctx, jobs[best])} "
                      f"(its plan costs {costs[best]:.0f} vs {costs[chosen]:.0f}).")
+    elif costs[chosen] > costs[best] + 1e-6:
+        lines.append(f"The exact optimizer slightly prefers {label(ctx, jobs[best])}, but the "
+                     f"difference is tiny ({costs[chosen] - costs[best]:.2f}): practically a tie.")
     else:
         lines.append("The exact optimizer agrees with this choice.")
     return lines

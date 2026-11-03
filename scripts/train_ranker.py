@@ -26,6 +26,7 @@ def main() -> None:
     ap.add_argument("--data", type=Path, default=ROOT / "data" / "generated" / "pairs.npz")
     ap.add_argument("--out", type=Path, default=DEFAULT_MODEL_PATH)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--max-iter", type=int, default=800, help="most boosting rounds (early stopping may use fewer)")
     args = ap.parse_args()
 
     if not args.data.exists():
@@ -41,12 +42,13 @@ def main() -> None:
     val = np.isin(groups, val_scen)
 
     t0 = time.perf_counter()
-    ranker = PairwiseRanker().fit(X[~val], y[~val], w[~val])
+    ranker = PairwiseRanker(max_iter=args.max_iter).fit(X[~val], y[~val], w[~val])
     took = time.perf_counter() - t0
     acc_train = ((ranker.predict_proba(X[~val]) > 0.5) == y[~val]).mean()
     acc_val = ((ranker.predict_proba(X[val]) > 0.5) == y[val]).mean()
     ranker.meta.update(pairwise_accuracy_train=float(acc_train), pairwise_accuracy_val=float(acc_val),
-                       train_scenarios=int(len(scen) - len(val_scen)))
+                       train_scenarios=int(len(scen) - len(val_scen)),
+                       layouts=str(d["layouts"]) if "layouts" in d else "our track only")
     path = ranker.save(args.out)
 
     print(f"trained on {(~val).sum()} pair rows from {len(scen) - len(val_scen)} scenarios "

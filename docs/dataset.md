@@ -5,20 +5,25 @@ The capstone asks for the dataset used by the machine-learning model. This is ho
 ## Where the data comes from
 There is no factory history to learn from yet, so the data is **simulated**, and every example is labelled by an **exact optimizer** (the "teacher"):
 
-1. `agv_brain/simulator.py` creates a random factory situation:
+1. `agv_brain/simulator.py` creates a random factory situation, either on our track (`config/factory_layout.yaml`, 40 %) or on one of 400 **random factory layouts** (`agv_brain/layouts.py`, 60 %). A random layout has:
+   - a grid of 2–4 × 3–6 junctions, lines of 50–150 cm, and a few lines removed;
+   - 2–5 materials, 2–6 stations, and a dock on line ends around the outside;
+   - only junctions the IR sensors can detect (T, cross or L corner).
+
+   On whichever track it picked, it then places:
    - the car at a random node and heading;
    - 2 to 6 open requests, each a (station, material) pair;
    - per request: a usage rate of 0.5–6 units/min and a time until empty. Time until empty is 30 % urgent (0–60 s), 40 % medium (60–240 s) and 30 % relaxed (4–15 min);
    - a safety stock worth 30–150 s of usage;
    - a station criticality of 1–3;
    - a waiting time (exponential, mean 60 s);
-   - a car speed of 0.6×, 0.8×, 1×, 1.2× or 1.5× the configured speed, so the model still works after the real car is calibrated.
+   - a car speed between 0.6× and 1.5× the configured speed, so the model still works after the real car is calibrated.
 2. `agv_brain/optimizer.py` tries every possible order and computes, for each request, the best total cost if that request goes first. The cost counts line-stop seconds × criticality, time below safety stock, waiting, and driving time; see `config/materials.yaml` → `cost`.
 3. `agv_brain/ranker.py` turns each situation into **pairs**: "should request i go before request j?" The label is 1 if starting with i gives a lower best cost than starting with j. Exact ties are skipped.
 
 Regenerate it with:
 ```bash
-python scripts/generate_dataset.py --scenarios 20000 --seed 1
+python scripts/generate_dataset.py --scenarios 30000 --random-layouts 400 --layout-share 0.6
 ```
 
 ## Files
@@ -28,12 +33,13 @@ python scripts/generate_dataset.py --scenarios 20000 --seed 1
 | `data/generated/requests.csv` | no | all situations, one row per request |
 | `data/generated/pairs.npz` | no | the training matrix: `X` (pair features), `y` (labels), `w` (weights), `groups` (situation id) |
 
-Size of the default dataset: 20,000 situations, about 80,000 requests and about 280,000 pairs with 47 features each. The labels are balanced (50 % / 50 %).
+Size of the default dataset: 30,000 situations, 119,343 requests and 413,888 pairs with 47 features each. The labels are balanced (50 % / 50 %).
 
 ## Columns of `requests_sample.csv`
 | Column | Meaning |
 |---|---|
 | `scenario` | situation id (all requests with the same id were waiting at the same time) |
+| `layout` | `ours` (our track) or `random-<k>` (one of the random factories) |
 | `request` | material@station |
 | `car_node`, `car_heading`, `car_speed_cm_s` | where the car was, which way it faced, how fast it drives |
 | `material`, `station` | what is needed where |
@@ -58,4 +64,6 @@ A pair row in `pairs.npz` holds the features of i, the features of j, and their 
 
 ## Train / test split
 - Training holds out 20 % of the situations, whole situations at a time, for validation (`scripts/train_ranker.py`).
-- The final test uses 1000 **new** situations from a different random seed. They have up to **7** requests, while training used at most 6 (`scripts/evaluate.py`).
+- The final test (`scripts/evaluate.py`) uses different random seeds from training, with up to **7** requests per situation (training used at most 6). It has two parts:
+  - 1000 new situations on our track;
+  - 1000 situations on 200 **factory layouts the model has never seen**.

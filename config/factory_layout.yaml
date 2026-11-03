@@ -14,9 +14,9 @@
 #               |                     |
 #              S3                    S4
 #
-# To use your real track: measure it, replace the nodes/edges below, and retrain
-# the ranker with scripts/train_ranker.py. If a line is curved, give its real
-# length as a third value, e.g. [J1, J2, 130].
+# To use your real track: measure it and replace the nodes/edges below. No
+# retraining is needed: the ranker was also trained on 400 random factory layouts.
+# If a line is curved, give its real length as a third value, e.g. [J1, J2, 130].
 
 units: cm
 

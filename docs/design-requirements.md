@@ -4,8 +4,8 @@ The capstone asks for at least four measurable requirements, including response 
 
 | # | Requirement | Target | How it is measured | Measured | Status |
 |---|---|---|---|---|---|
-| R1 | **Response time** of the AI decision | ≤ 100 ms per decision | `scripts/evaluate.py` (decision time, 1000 situations) | about 5 ms mean, under 7 ms p95 | Met (software) |
-| R2 | **System accuracy**: AI picks the best delivery | ≥ 80 % top-1 accuracy vs the exact optimizer | `scripts/evaluate.py` on 1000 unseen situations | 91.2 % | Met (software) |
+| R1 | **Response time** of the AI decision | ≤ 100 ms per decision | `scripts/evaluate.py` (decision time, 1000 situations) | about 20 ms mean, under 35 ms p95 | Met (software) |
+| R2 | **System accuracy**: AI picks the best delivery | ≥ 80 % top-1 accuracy vs the exact optimizer | `scripts/evaluate.py` on 1000 unseen situations, plus 1000 on 200 unseen factory layouts | 91.5 % (91.3 % on new layouts) | Met (software) |
 | R3 | **End-to-end response**: low stock → car receives its task | ≤ 2 s | timestamps of the stock reading and of the car's `task` message | – | Phase 4 |
 | R4 | **Stock measurement accuracy** (load cell) | ≤ ±1 unit (≤ ±2 % of full scale) after calibration | known weights, see [calibration.md](calibration.md) | – | Phase 3 |
 | R5 | **Navigation accuracy** (junction counting) | ≥ 95 % of runs stop at the right node | 20 runs on each of 5 test routes | – | Phase 4 |
