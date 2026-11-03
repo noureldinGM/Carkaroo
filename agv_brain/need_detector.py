@@ -85,7 +85,7 @@ def detect_needs(ctx: Context, state: FactoryState,
         box = s.materials[mid].delivery_qty
         if units < s.automation.warehouse_low_boxes * box:
             report.alerts.append(f"Warehouse stock of {mid} ({s.materials[mid].name}) is low: "
-                                 f"{units} units = {units // box} boxes. Reorder from the supplier.")
+                                 f"{units} units left ({units // box} full boxes). Reorder from the supplier.")
     return report
 
 

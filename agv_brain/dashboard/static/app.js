@@ -268,7 +268,15 @@ function carSentence(state) {
 function renderAI(dec, state) {
   const now = $("#now"), list = $("#queue");
   if (!dec || !dec.queue || dec.queue.length === 0) {
-    now.innerHTML = `<div class="now-label">AI's choice</div>
+    const waiting = state.requests.length;
+    // requests are open but the safety rules let none through (empty warehouse, blocked line, ...)
+    const reasons = [...new Set((dec && dec.alerts) || [])];
+    now.innerHTML = waiting ? `<div class="now-label">${state.car.task ? "AI's next choice (when the car is free)" : "AI's choice"}</div>
+      <div class="now-main">Can't serve the waiting request${waiting > 1 ? "s" : ""}</div>
+      <p class="now-why">${waiting} request${waiting > 1 ? "s are" : " is"} waiting, but the safety rules stop the car:</p>
+      <ul class="why now-blocked">${reasons.map((a) => `<li>${esc(a)}</li>`).join("") || "<li>Checking again…</li>"}</ul>
+      <div class="now-car">${esc(carSentence(state))}</div>`
+    : `<div class="now-label">AI's choice</div>
       <div class="now-main">Nothing to deliver right now</div>
       <p class="now-why">Every station has enough stock. The AI asks for a delivery by itself as soon as
         a station would run low before the car could get there.</p>
@@ -312,11 +320,12 @@ function renderAI(dec, state) {
 // the detailed numbers, behind "Show the AI's numbers"
 function renderNumbers(dec, q, first) {
   if (!$("#details").open) return;  // nothing to update while it is closed
-  const maxScore = Math.max(1e-9, ...q.map((r) => r.score ?? 0));
+  // a request's AI score = how many of the other requests it should go before (sum of pairwise wins)
+  const others = q.length - 1;
   const costs = q.map((r) => r.cost_if_first).filter((c) => c !== null && c !== undefined);
   const maxCost = Math.max(1e-9, ...costs), minCost = Math.min(...costs);
   const rows = q.map((r, i) => {
-    const score = r.score === null ? "–" : `<div class="mini"><div class="track-bar"><div class="fill" style="width:${(100 * r.score / maxScore).toFixed(0)}%"></div></div>${r.score.toFixed(2)}</div>`;
+    const score = r.score === null || others === 0 ? "–" : `<div class="mini"><div class="track-bar"><div class="fill" style="width:${(100 * r.score / others).toFixed(0)}%"></div></div>${r.score.toFixed(1)} of ${others}</div>`;
     const isBest = r.cost_if_first === minCost;
     const cost = r.cost_if_first === null || r.cost_if_first === undefined ? "–"
       : `<div class="mini"><div class="track-bar"><div class="fill cost${isBest ? " best" : ""}" style="width:${(100 * r.cost_if_first / maxCost).toFixed(0)}%"></div></div>${r.cost_if_first.toFixed(0)}${isBest ? " ★" : ""}</div>`;
@@ -333,7 +342,7 @@ function renderNumbers(dec, q, first) {
     <div class="table-wrap"><table class="queue">
       <thead><tr>
         <th>#</th><th>Request</th>
-        <th title="ML ranker score: how many other requests it should go before (higher = sooner)">AI score</th>
+        <th title="ML ranker: how many of the other requests this one should go before (higher = sooner)">AI score</th>
         <th title="Time until the station runs out, and the trip time">Empty in</th>
         <th title="Empty-in minus trip time. Negative: the line stops even if served now">Slack</th>
         <th title="Exact optimizer: total cost of the best plan that starts with this request (lower is better, ★ = best)">Cost if first</th>
@@ -341,7 +350,9 @@ function renderNumbers(dec, q, first) {
       <tbody>${rows}</tbody>
     </table></div>
     <ul class="why">${dec.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
-    <p class="explain">AI score: the ML ranker compares every pair of requests. Cost if first: the exact optimizer
+    <p class="explain">AI score: the ML ranker compares every pair of requests; "3.8 of 4" means it should go
+      before about 3.8 of the 4 others. The highest goes first, and the AI decides again after every delivery.
+      Cost if first: the exact optimizer
       tries every possible order and counts line-stop time × criticality, time below safety stock, waiting and driving.
       Policy: ${dec.policy === "ml" ? "ML ranker" : esc(dec.policy)}, decided at ${clock(dec.ts)}.</p>`;
 }

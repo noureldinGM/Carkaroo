@@ -45,7 +45,7 @@ flowchart TD
     B --> C{"Will a station reach its safety stock<br/>within delivery time + horizon?"}
     C -- no --> A
     C -- yes --> D["Create request<br/>material to station"]
-    D --> E["Safety rules<br/>warehouse has it? room for a box?<br/>reachable? battery OK?"]
+    D --> E["Safety rules<br/>warehouse has a full box? room for a box?<br/>reachable? battery OK?"]
     E -- "not OK" --> F["Alert<br/>(reorder, clear obstacle, charge)"]
     E -- OK --> G["ML ranker scores every request<br/>pairwise: i before j?"]
     G --> H["Highest score goes first"]

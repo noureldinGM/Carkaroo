@@ -299,6 +299,12 @@ class Controller:
         for text in decision.alerts:
             self._alert(text)
         if not decision.tasks and not decision.charge_first:
+            # nothing can be served (e.g. the warehouse is empty): still show the dashboard why
+            if time.monotonic() - self._last_preview > self.preview_every_s:
+                self._last_preview = time.monotonic()
+                msg["preview"] = True
+                self.decision = msg
+                self.bus.publish(P.AI_DECISION, msg, retain=True)
             return
         msg["preview"] = False
         self.decision = msg

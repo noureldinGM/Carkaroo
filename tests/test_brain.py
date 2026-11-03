@@ -110,6 +110,17 @@ def test_empty_warehouse_and_low_battery(ctx):
     assert any("out of A" in a for a in dec.alerts)
 
 
+def test_warehouse_needs_a_full_box(ctx):
+    """Less than one box left counts as empty, so the warehouse never goes below zero."""
+    d = Dispatcher(ctx, policy="optimal")
+    state = initial_state(ctx.settings)
+    box = ctx.settings.materials["B"].delivery_qty
+    state.warehouse["B"] = box - 1
+    assert d.decide(state, [Request("1", "B", "S3")]).tasks == []
+    state.warehouse["B"] = box
+    assert [t.job.material for t in d.decide(state, [Request("1", "B", "S3")]).tasks] == ["B"]
+
+
 # -- ML ranker ----------------------------------------------------------------
 
 def test_small_ranker_beats_fifo(ctx):
