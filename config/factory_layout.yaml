@@ -1,0 +1,56 @@
+# Sample factory track (table-top scale model).
+#
+# Coordinates are in cm and y grows downward (like a drawing on screen), so the
+# heading "N" means "up" on the map. Edges must be straight horizontal or vertical
+# lines. Every node has to be something the car can physically detect:
+#   junction -> a cross (+) or T crossing on the track
+#   rack / station / dock -> the end of a line (dead end with a stop marker)
+#
+#   W-A        W-B        W-C
+#    |          |          |
+#   J1 ------- J2 ------- J3 ------- J4 ------- S1
+#    |          |          |          |
+#   HOME       J5 ------- J6 ------- J7 ------- S2
+#               |                     |
+#              S3                    S4
+#
+# To use your real track: measure it, replace the nodes/edges below, and retrain
+# the ranker with scripts/train_ranker.py. If a line is curved, give its real
+# length as a third value, e.g. [J1, J2, 130].
+
+units: cm
+
+nodes:
+  W-A:  {x: 0,   y: 0,   type: rack}
+  W-B:  {x: 100, y: 0,   type: rack}
+  W-C:  {x: 200, y: 0,   type: rack}
+  J1:   {x: 0,   y: 50,  type: junction}
+  J2:   {x: 100, y: 50,  type: junction}
+  J3:   {x: 200, y: 50,  type: junction}
+  J4:   {x: 300, y: 50,  type: junction}
+  S1:   {x: 400, y: 50,  type: station}
+  HOME: {x: 0,   y: 100, type: dock}
+  J5:   {x: 100, y: 100, type: junction}
+  J6:   {x: 200, y: 100, type: junction}
+  J7:   {x: 300, y: 100, type: junction}
+  S2:   {x: 400, y: 100, type: station}
+  S3:   {x: 100, y: 150, type: station}
+  S4:   {x: 300, y: 150, type: station}
+
+edges:
+  - [W-A, J1]
+  - [W-B, J2]
+  - [W-C, J3]
+  - [J1, J2]
+  - [J2, J3]
+  - [J3, J4]
+  - [J4, S1]
+  - [J1, HOME]
+  - [J2, J5]
+  - [J3, J6]
+  - [J4, J7]
+  - [J5, J6]
+  - [J6, J7]
+  - [J7, S2]
+  - [J5, S3]
+  - [J7, S4]
