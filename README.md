@@ -145,7 +145,7 @@ The AI and the dashboard only talk MQTT ([docs/protocol.md](docs/protocol.md)), 
 ```bash
 .venv\Scripts\python scripts\run_controller.py --sim-stations
 ```
-This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). The real-network path is written but not yet tested; see [docs/project-plan.md](docs/project-plan.md), Phase 2.
+This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). The whole simulated factory already runs through Mosquitto on this laptop (`run_factory_sim.py --mqtt localhost:1883`). For the car to connect over Wi-Fi, and for the cloud bridge, see [docs/project-plan.md](docs/project-plan.md), Phase 2.
 
 ## Documents
 - [Project plan and roadmap](docs/project-plan.md)

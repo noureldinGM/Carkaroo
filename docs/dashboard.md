@@ -20,7 +20,7 @@ Add `--sim-stations` while the load cells are not built yet. To open it on a pho
 
 Yes, by design. The dashboard and the AI never talk to the car directly: they only read and send the MQTT messages in [protocol.md](protocol.md). The simulated car sends exactly the same messages the real car will. Once the BW20-12F firmware (Phase 3) sends its `status` and `node` / `done` events over Wi-Fi, the dashboard shows the real car, with no changes.
 
-So far it has only been run with the simulated car. The real-network path (Mosquitto + `MqttBus`) is written but not tested yet.
+So far it has run with the simulated car, both inside one program and through a real Mosquitto broker (`run_factory_sim.py --mqtt localhost:1883`). The real car is the next step (Phase 3).
 
 ## What is on the page
 

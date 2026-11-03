@@ -34,6 +34,17 @@ AI_REQUEST = f"{PREFIX}/ai/request"     # manual request, e.g. from the dashboar
 SIM_CONTROL = f"{PREFIX}/sim/control"   # simulation only: obstacles, stock changes
 
 
+def set_prefix(prefix: str) -> None:
+    """Use another topic root. Tests use their own, so they never disturb a running factory."""
+    global PREFIX, AI_DECISION, AI_STATE, AI_ALERTS, AI_REQUEST, SIM_CONTROL
+    PREFIX = prefix
+    AI_DECISION = f"{PREFIX}/ai/decision"
+    AI_STATE = f"{PREFIX}/ai/state"
+    AI_ALERTS = f"{PREFIX}/ai/alerts"
+    AI_REQUEST = f"{PREFIX}/ai/request"
+    SIM_CONTROL = f"{PREFIX}/sim/control"
+
+
 def route_dict(route: Route) -> dict:
     return {"path": list(route.path), "commands": list(route.commands),
             "distance_cm": round(route.distance_cm, 1), "time_s": round(route.time_s, 1)}

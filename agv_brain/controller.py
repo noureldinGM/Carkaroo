@@ -154,6 +154,9 @@ class Controller:
                 a.waiting_action = idx == len(route.path) - 1
             elif kind == "done":
                 action = msg.get("action")
+                # MQTT QoS 1 is "at least once": ignore a repeated done for a leg already finished
+                if action in ("LIFT", "LOWER") and int(msg.get("leg", a.leg)) != a.leg:
+                    return
                 if action == "LIFT":
                     qty = self.ctx.settings.materials[a.job.material].delivery_qty
                     self.state.warehouse[a.job.material] -= qty

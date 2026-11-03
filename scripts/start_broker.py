@@ -117,9 +117,12 @@ def main() -> None:
                  "    winget install --id EclipseFoundation.Mosquitto -e\n"
                  "(Windows asks for administrator permission.)")
     if not port_free(port):
-        sys.exit(f"Port {port} is already in use, probably by the Mosquitto Windows service. "
-                 "Stop it from an administrator terminal with:  Stop-Service mosquitto\n"
-                 "(the service only listens on this laptop, so the car could not reach it).")
+        sys.exit(f"Port {port} is already in use, probably by the Mosquitto Windows service.\n"
+                 "That service only listens on this laptop, so the car could not reach it over Wi-Fi.\n"
+                 "In an administrator PowerShell, stop it and keep it from starting with Windows:\n"
+                 "    Stop-Service mosquitto\n"
+                 "    Set-Service mosquitto -StartupType Manual\n"
+                 "then run this script again.")
 
     print(f"MQTT broker on port {port}.")
     addrs = lan_addresses()
