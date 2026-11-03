@@ -1,0 +1,72 @@
+# Materials, stations and car settings used by the AI dispatcher.
+# Rates are in units per minute, times in seconds, distances in cm.
+
+car:
+  id: AGV-1
+  speed_cm_s: 15          # average line-following speed
+  turn_s: 2.0             # extra time for a LEFT or RIGHT at a junction
+  uturn_s: 4.0            # extra time to turn around (leaving a dead end)
+  pickup_s: 4.0           # loading time at a warehouse rack
+  drop_s: 4.0             # unloading time at a station
+  battery_pct_per_m: 0.5  # battery used per meter driven
+  min_battery_pct: 20     # below this the car goes to charge first
+  dock: HOME              # charging dock node
+  start_heading: N        # heading of the car when parked at the dock
+
+materials:
+  A:
+    name: Steel bolts
+    rack: W-A
+    warehouse_stock: 200
+    delivery_qty: 20      # units carried in one trip (one box)
+  B:
+    name: Plastic housings
+    rack: W-B
+    warehouse_stock: 150
+    delivery_qty: 15
+  C:
+    name: Copper wire
+    rack: W-C
+    warehouse_stock: 80
+    delivery_qty: 10
+
+stations:
+  S1:
+    name: Assembly line 1
+    criticality: 3        # 1 = can wait, 3 = bottleneck line
+    materials:
+      A: {stock: 10, rate_per_min: 3.0, safety_stock: 6, capacity: 60}
+      B: {stock: 20, rate_per_min: 2.0, safety_stock: 4, capacity: 40}
+  S2:
+    name: Assembly line 2
+    criticality: 2
+    materials:
+      A: {stock: 18, rate_per_min: 2.5, safety_stock: 5, capacity: 50}
+      C: {stock: 9,  rate_per_min: 1.0, safety_stock: 2, capacity: 20}
+  S3:
+    name: Packaging
+    criticality: 2
+    materials:
+      B: {stock: 2,  rate_per_min: 2.0, safety_stock: 4, capacity: 40}
+      C: {stock: 12, rate_per_min: 1.5, safety_stock: 3, capacity: 30}
+  S4:
+    name: Quality lab
+    criticality: 1
+    materials:
+      C: {stock: 6,  rate_per_min: 0.5, safety_stock: 2, capacity: 15}
+
+# Fully automatic mode: the system creates requests itself from the station sensors.
+automation:
+  horizon_s: 120            # request a delivery when a station will hit its safety
+                            # stock within (delivery time + this look-ahead)
+  warehouse_low_boxes: 3    # warn to reorder from the supplier below this many boxes
+  obstacle_wait_s: 10       # if the ultrasonic sensor still sees an obstacle after
+                            # this long, block that line and re-route
+
+# What the teacher optimizer (and so the trained ranker) tries to minimise.
+cost:
+  stop_weight: 1.0          # per second a station is stopped, times its criticality
+  below_safety_weight: 0.2  # per second a station is below safety stock, times criticality
+  flow_weight: 0.02         # per second each request waits to be completed
+  aging_s: 300              # requests older than this count double in the flow term
+  travel_weight: 0.05       # per second of total driving (tie-break: shorter plans)
