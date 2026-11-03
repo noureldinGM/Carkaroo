@@ -19,6 +19,22 @@ from collections.abc import Callable
 Handler = Callable[[str, dict], None]
 
 
+def filter_covers(a: str, b: str) -> bool:
+    """True if every topic matched by filter `b` is also matched by filter `a`."""
+    pa, pb = a.split("/"), b.split("/")
+    for i, part in enumerate(pa):
+        if part == "#":
+            return True
+        if i >= len(pb):
+            return False
+        if part == "+":
+            if pb[i] == "#":
+                return False
+        elif part != pb[i]:
+            return False
+    return len(pa) == len(pb)
+
+
 def topic_matches(pattern: str, topic: str) -> bool:
     """MQTT wildcard matching: '+' is one level, '#' is everything below."""
     p, t = pattern.split("/"), topic.split("/")
@@ -101,7 +117,14 @@ class MemoryBus:
 
 
 class MqttBus:
-    """Same interface over a real MQTT broker (paho-mqtt)."""
+    """Same interface over a real MQTT broker (paho-mqtt).
+
+    A broker sends one copy of a message for every subscription of a client that
+    matches it, so overlapping subscriptions (e.g. factory/car/AGV-1/event and
+    factory/car/+/event) would deliver everything twice. This class therefore
+    subscribes the broker only to filters that don't overlap, and hands each
+    message to the right handlers itself.
+    """
 
     def __init__(self, host: str = "localhost", port: int = 1883, client_id: str = "",
                  username: str | None = None, password: str | None = None, tls: bool = False,
@@ -109,6 +132,7 @@ class MqttBus:
         import paho.mqtt.client as mqtt
 
         self._subs: list[tuple[str, Handler]] = []
+        self._broker_filters: set[str] = set()   # what the broker is asked for, never overlapping
         self._lock = threading.Lock()
         self._connected = threading.Event()
         self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
@@ -126,9 +150,9 @@ class MqttBus:
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         with self._lock:
-            patterns = {p for p, _ in self._subs}
-        for p in patterns:  # re-subscribe after a reconnect
-            client.subscribe(p, qos=1)
+            filters = set(self._broker_filters)
+        for f in filters:  # re-subscribe after a reconnect
+            client.subscribe(f, qos=1)
         self._connected.set()
 
     def _on_message(self, client, userdata, msg):
@@ -151,7 +175,14 @@ class MqttBus:
     def subscribe(self, pattern: str, handler: Handler) -> None:
         with self._lock:
             self._subs.append((pattern, handler))
+            if any(filter_covers(f, pattern) for f in self._broker_filters):
+                return  # already receiving these messages
+            replaced = {f for f in self._broker_filters if filter_covers(pattern, f)}
+            self._broker_filters -= replaced
+            self._broker_filters.add(pattern)
         self.client.subscribe(pattern, qos=1)
+        for f in replaced:
+            self.client.unsubscribe(f)
 
     def flush(self, timeout: float = 5.0) -> None:
         time.sleep(0.2)

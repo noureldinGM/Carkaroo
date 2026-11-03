@@ -29,14 +29,16 @@ Capstone requirements this plan covers (G12 2026/2027, "IT and AI Applications")
 - [x] Explanations ("why" + "what if")
 - [x] Demo, sensitivity sweep, evaluation report, tests
 
-## Phase 2: Communication and cloud (software done; broker and cloud not yet tested)
+## Phase 2: Communication and cloud (done on this laptop; Wi-Fi listener and cloud still to do)
 - [x] Message bus with the MQTT topics of [protocol.md](protocol.md): in-memory for simulation, `MqttBus` for a real broker
 - [x] `agv_brain/controller.py`: feeds stock readings to the forecaster, creates requests, runs the dispatcher, sends tasks, tracks the car, handles obstacles (wait → re-route) and charging
 - [x] `SimulatedCar` and `SimulatedStation` that speak the same messages, so the whole system runs without hardware
 - [x] Every reading, decision and car event logged to CSV in `logs/` (data for retraining and the logbook)
 - [x] Live-operation training (DAgger): live accuracy 76 % → 84 %
 - [x] Broker and cloud scripts: `start_broker.py` (with the HiveMQ Cloud bridge), `run_controller.py`, `cloud_check.py`
-- [ ] **Install Mosquitto** (`winget install --id EclipseFoundation.Mosquitto -e`, needs administrator permission) and test the real-network path
+- [x] Mosquitto installed; the whole simulated factory runs through it (`run_factory_sim.py --mqtt localhost:1883`), checked with `mosquitto_sub` and `tests/test_mqtt.py`
+- [x] Fixed: overlapping subscriptions made Mosquitto deliver every message twice; duplicate `done` events are now ignored (QoS 1 is "at least once")
+- [ ] Let the car reach the broker over Wi-Fi: the Mosquitto Windows service only listens on the laptop. In an administrator PowerShell run `Stop-Service mosquitto` and `Set-Service mosquitto -StartupType Manual`, then use `python scripts/start_broker.py` (allow it through the Windows firewall on private networks)
 - [ ] Create a free HiveMQ Cloud account, set it up in `config/mqtt.yaml`, and measure R8 with `cloud_check.py`
 
 ## Phase 3: Hardware

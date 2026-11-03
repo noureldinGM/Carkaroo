@@ -212,6 +212,7 @@ class SimulatedStation:
         self.rate = {m: sm.rate_per_min / 60.0 for m, sm in st.materials.items()}
         self.stopped_s = {m: 0.0 for m in st.materials}
         self.received = {m: 0 for m in st.materials}
+        self._delivered_tasks: set = set()   # MQTT may repeat a message: count each box once
         self._rng = np.random.default_rng(seed)
         self._halt = threading.Event()
         self._lock = threading.Lock()
@@ -222,7 +223,8 @@ class SimulatedStation:
     def _on_car(self, topic: str, msg: dict) -> None:
         if msg.get("type") == "done" and msg.get("action") == "LOWER" and msg.get("node") == self.station:
             m = msg.get("material")
-            if m in self.stock:
+            if m in self.stock and msg.get("task_id") not in self._delivered_tasks:
+                self._delivered_tasks.add(msg.get("task_id"))
                 with self._lock:
                     qty = self.settings.materials[m].delivery_qty
                     self.stock[m] += qty
