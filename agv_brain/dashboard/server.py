@@ -6,6 +6,7 @@ so it works the same for the simulation and for the real car over MQTT.
     GET  /                 the dashboard page
     GET  /api/snapshot     {"state", "decision", "layout", "sim"} as JSON
     POST /api/request      {"material": "B", "station": "S3"}  manual request
+    POST /api/refill       {"material": "A"}  the warehouse rack was restocked
     POST /api/sim          simulation controls (obstacle, stock), simulation only
 """
 
@@ -34,7 +35,7 @@ def layout_json(ctx: Context) -> dict:
         nodes.append({"id": n.id, "x": n.x, "y": n.y, "type": n.type, "out": out})
     edges = sorted({tuple(sorted((a, b))) for a in fmap.nodes for b in fmap.neighbors(a)})
     return {"nodes": nodes, "edges": [list(e) for e in edges],
-            "materials": {m.id: {"name": m.name, "rack": m.rack, "box": m.delivery_qty}
+            "materials": {m.id: {"name": m.name, "rack": m.rack, "box": m.delivery_qty, "full": m.warehouse_stock}
                           for m in s.materials.values()},
             "stations": {st.id: {"name": st.name, "criticality": st.criticality,
                                  "materials": list(st.materials)} for st in s.stations.values()},
@@ -87,6 +88,12 @@ class DashboardServer:
                 if self.path == "/api/request":
                     server.bus.publish(P.AI_REQUEST, {"material": body.get("material"),
                                                       "station": body.get("station")}, qos=1)
+                    return self._send(200, b'{"ok": true}')
+                if self.path == "/api/refill":
+                    msg = {"material": body.get("material")}
+                    if body.get("units") is not None:
+                        msg["units"] = body["units"]
+                    server.bus.publish(P.WAREHOUSE_REFILL, msg, qos=1)
                     return self._send(200, b'{"ok": true}')
                 if self.path == "/api/sim":
                     if not server.sim_controls:

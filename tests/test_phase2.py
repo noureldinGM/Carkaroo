@@ -92,6 +92,20 @@ def test_obstacle_with_no_way_around_waits_then_continues(sim):
     assert wait_until(lambda: any("B to S3" in e["text"] for e in c.events if e["type"] == "delivered"), timeout=40)
 
 
+def test_empty_warehouse_waits_until_refilled(sim):
+    c = sim.controller
+    with c._lock:
+        c.state.warehouse["B"] = 3          # less than one box of B
+    sim.control({"cmd": "set_stock", "station": "S3", "material": "B", "stock": 1})
+    assert wait_until(lambda: any("out of B" in a["text"] for a in c.alerts), timeout=30)
+    assert not any("B to S3" in e["text"] for e in c.events if e["type"] == "delivered")
+    sim.bus.publish(P.WAREHOUSE_REFILL, {"material": "B"}, qos=1)
+    full = c.ctx.settings.materials["B"].warehouse_stock
+    assert wait_until(lambda: any(e["type"] == "refill" for e in c.events), timeout=10)
+    assert wait_until(lambda: any("B to S3" in e["text"] for e in c.events if e["type"] == "delivered"), timeout=40)
+    assert c.state.warehouse["B"] == full - c.ctx.settings.materials["B"].delivery_qty
+
+
 def test_low_battery_goes_to_charge(sim):
     assert wait_until(lambda: sim.controller.stats["deliveries"] >= 1, timeout=30)
     sim.control({"cmd": "set_battery", "value": 10})
@@ -120,6 +134,12 @@ def test_dashboard_serves_state_and_requests():
     urllib.request.urlopen(req).read()
     bus.flush()
     assert got == [{"material": "B", "station": "S3"}]
+    refills = []
+    bus.subscribe(P.WAREHOUSE_REFILL, lambda t, p: refills.append(p))
+    urllib.request.urlopen(urllib.request.Request(f"{base}/api/refill", data=b'{"material": "A"}',
+                                                  method="POST")).read()
+    bus.flush()
+    assert refills == [{"material": "A"}]
     sim_req = urllib.request.Request(f"{base}/api/sim", data=b"{}", method="POST")
     with pytest.raises(urllib.error.HTTPError):  # simulation controls are off
         urllib.request.urlopen(sim_req)

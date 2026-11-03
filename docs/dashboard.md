@@ -36,7 +36,7 @@ The look follows the robot kit itself: a green chassis, yellow motors, a jumper-
 
 If requests are waiting but none can be served (for example the warehouse has less than one box left, or a line is blocked), the top says *"Can't serve the waiting requests"* and lists the reasons.
 
-**Stations:** one card per station with a stock bar per material (the black tick is the safety level), "runs out in …", and tags for *on the way* and *stopped*. Below: the warehouse, in boxes per material.
+**Stations:** one card per station with a stock bar per material (the black tick is the safety level), "runs out in …", and tags for *on the way* and *stopped*. Below: the warehouse, in boxes per material. The warehouse has no sensor: the AI counts every box the car takes, so after restocking a rack, press its **Refilled** button (it goes back to the full stock in `config/materials.yaml`). This works the same for the simulation and the real factory.
 
 **AI:** how often the AI made the best possible choice, and the ranking of the waiting requests:
 - the AI score, from the ML ranker: how many of the other requests it should go before. *"3.8 of 4"* means it beats about 3.8 of the 4 others. The highest goes first, and the AI decides again after every delivery;

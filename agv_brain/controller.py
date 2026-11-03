@@ -74,6 +74,7 @@ class Controller:
         bus.subscribe(P.car_status(car_id), self.on_status)
         bus.subscribe(P.car_event(car_id), self.on_event)
         bus.subscribe(P.AI_REQUEST, self.on_manual_request)
+        bus.subscribe(P.WAREHOUSE_REFILL, self.on_refill)
         self._thread = threading.Thread(target=self._loop, name="controller", daemon=True)
         self._thread.start()
 
@@ -204,6 +205,24 @@ class Controller:
             r = Request(f"manual-{material}@{station}-{now:.0f}", material, station, now)
             self.requests[r.id] = r
             self._event(f"Manual request: {self._label(material, station)}", "request")
+
+    def on_refill(self, topic: str, msg: dict) -> None:
+        """The warehouse has no sensor: a person reports a refill (the dashboard button).
+        Without "units" the rack goes back to its full stock from config/materials.yaml."""
+        with self._lock:
+            m = msg.get("material")
+            material = self.ctx.settings.materials.get(m)
+            if material is None:
+                self._alert(f"Refill ignored: unknown material {m}.")
+                return
+            try:
+                units = int(msg.get("units", material.warehouse_stock))
+            except (TypeError, ValueError):
+                self._alert(f"Refill ignored: bad number of units for {m}.")
+                return
+            self.state.warehouse[m] = max(0, units)
+            box = material.delivery_qty
+            self._event(f"Warehouse refilled: {units} {m} ({units // box} boxes)", "refill")
 
     def _is_open(self, station: str, material: str) -> bool:
         if any(r.station == station and r.material == material for r in self.requests.values()):
