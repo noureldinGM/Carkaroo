@@ -7,7 +7,7 @@ import pytest
 from agv_brain.baselines import BASELINES, rollout
 from agv_brain.dataset import generate
 from agv_brain.dispatcher import Dispatcher
-from agv_brain.forecaster import ConsumptionForecaster, ewma_rate
+from agv_brain.forecaster import ConsumptionForecaster, estimate_rate
 from agv_brain.models import CarState, Job, Request, initial_state
 from agv_brain.need_detector import detect_needs
 from agv_brain.optimizer import best_order, first_choice_costs
@@ -31,19 +31,34 @@ DOCK = CarState("HOME", "N", 90)
 
 # -- forecaster -------------------------------------------------------------
 
-def test_ewma_rate_follows_consumption():
+def test_rate_follows_consumption():
     readings = [(t, 100 - 2 * t / 60) for t in range(0, 600, 30)]   # 2 units / min
-    assert ewma_rate(readings) == pytest.approx(2.0, rel=1e-6)
+    assert estimate_rate(readings) == pytest.approx(2.0, rel=1e-6)
+
+
+def test_rate_from_whole_unit_load_cell_readings():
+    # a reading every 5 s, rounded to whole units like a real load cell
+    readings = [(t, round(30 - 2 * t / 60)) for t in range(0, 125, 5)]
+    assert estimate_rate(readings) == pytest.approx(2.0, rel=0.1)
 
 
 def test_refill_is_not_negative_usage():
-    f = ConsumptionForecaster(alpha=1.0)
+    f = ConsumptionForecaster()
     f.update("S1", "A", 0, 10)
     f.update("S1", "A", 60, 8)      # used 2 in a minute
     f.update("S1", "A", 70, 28)     # a box of 20 delivered
     f.update("S1", "A", 130, 26)    # used 2 in a minute
     assert f.rate_per_min("S1", "A", fallback=99) == pytest.approx(2.0)
     assert f.rate_per_min("S2", "B", fallback=1.5) == 1.5
+
+
+def test_empty_bin_keeps_last_rate():
+    f = ConsumptionForecaster()
+    for t in range(0, 125, 5):
+        f.update("S3", "B", t, max(0, round(8 - 4 * t / 60)))   # empty after 2 min
+    for t in range(125, 300, 5):
+        f.update("S3", "B", t, 0)                                 # line stopped
+    assert f.rate_per_min("S3", "B", fallback=0) == pytest.approx(4.0, rel=0.15)
 
 
 # -- teacher optimizer --------------------------------------------------------

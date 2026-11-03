@@ -50,6 +50,7 @@ class AutomationParams:
     horizon_s: float = 120.0         # look-ahead: request this early before the safety level
     warehouse_low_boxes: int = 3     # warn when the warehouse has fewer boxes than this
     obstacle_wait_s: float = 10.0    # wait this long for an obstacle to clear before re-routing
+    block_expiry_s: float = 300.0    # a blocked line is tried again after this long
 
 
 @dataclass(frozen=True)

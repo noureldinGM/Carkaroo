@@ -1,0 +1,161 @@
+"""Message bus: how the AI, the car, the stations and the dashboard talk.
+
+Two implementations with the same interface:
+    MemoryBus   everything in one Python process (simulation, tests, demos)
+    MqttBus     a real MQTT broker (Mosquitto on the laptop), for real hardware
+
+Messages are JSON objects. Topics follow docs/protocol.md, e.g.
+    factory/station/S3/stock      factory/car/AGV-1/cmd
+"""
+
+from __future__ import annotations
+
+import json
+import queue
+import threading
+import time
+from collections.abc import Callable
+
+Handler = Callable[[str, dict], None]
+
+
+def topic_matches(pattern: str, topic: str) -> bool:
+    """MQTT wildcard matching: '+' is one level, '#' is everything below."""
+    p, t = pattern.split("/"), topic.split("/")
+    for i, part in enumerate(p):
+        if part == "#":
+            return True
+        if i >= len(t) or (part != "+" and part != t[i]):
+            return False
+    return len(p) == len(t)
+
+
+class Clock:
+    """Simulation clock: `scale` sim-seconds pass per real second (1 = real time)."""
+
+    def __init__(self, scale: float = 1.0):
+        self.scale = scale
+        self._t0 = time.monotonic()
+
+    def now(self) -> float:
+        return (time.monotonic() - self._t0) * self.scale
+
+    def sleep(self, sim_s: float) -> None:
+        if sim_s > 0:
+            time.sleep(sim_s / self.scale)
+
+
+class MemoryBus:
+    """In-process broker. Delivery happens on one worker thread, like a real broker,
+    so a handler can publish without re-entering other handlers."""
+
+    def __init__(self):
+        self._subs: list[tuple[str, Handler]] = []
+        self._retained: dict[str, dict] = {}
+        self._lock = threading.Lock()
+        self._queue: queue.Queue = queue.Queue()
+        self._worker = threading.Thread(target=self._run, name="memory-bus", daemon=True)
+        self._worker.start()
+
+    def publish(self, topic: str, payload: dict, qos: int = 0, retain: bool = False) -> None:
+        payload = json.loads(json.dumps(payload))  # same as going over the wire
+        if retain:
+            with self._lock:
+                self._retained[topic] = payload
+        self._queue.put((topic, payload))
+
+    def subscribe(self, pattern: str, handler: Handler) -> None:
+        with self._lock:
+            self._subs.append((pattern, handler))
+            retained = [(t, p) for t, p in self._retained.items() if topic_matches(pattern, t)]
+        for t, p in retained:
+            self._queue.put((t, p, handler))
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            if item is None:
+                return
+            if len(item) == 3:
+                topic, payload, only = item
+                targets = [only]
+            else:
+                topic, payload = item
+                with self._lock:
+                    targets = [h for pat, h in self._subs if topic_matches(pat, topic)]
+            for handler in targets:
+                try:
+                    handler(topic, payload)
+                except Exception as exc:  # a broken handler must not stop the bus
+                    print(f"[bus] handler error on {topic}: {exc!r}")
+            self._queue.task_done()
+
+    def flush(self, timeout: float = 5.0) -> None:
+        """Wait until every queued message has been delivered (for tests)."""
+        end = time.monotonic() + timeout
+        while self._queue.unfinished_tasks and time.monotonic() < end:
+            time.sleep(0.005)
+
+    def close(self) -> None:
+        self._queue.put(None)
+
+
+class MqttBus:
+    """Same interface over a real MQTT broker (paho-mqtt)."""
+
+    def __init__(self, host: str = "localhost", port: int = 1883, client_id: str = "",
+                 username: str | None = None, password: str | None = None, tls: bool = False,
+                 connect_timeout: float = 5.0):
+        import paho.mqtt.client as mqtt
+
+        self._subs: list[tuple[str, Handler]] = []
+        self._lock = threading.Lock()
+        self._connected = threading.Event()
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
+        if username:
+            self.client.username_pw_set(username, password)
+        if tls:
+            self.client.tls_set()
+        self.client.on_connect = self._on_connect
+        self.client.on_message = self._on_message
+        self.client.on_disconnect = lambda *a: self._connected.clear()
+        self.client.connect(host, port, keepalive=30)
+        self.client.loop_start()
+        if not self._connected.wait(connect_timeout):
+            raise ConnectionError(f"no MQTT broker answered at {host}:{port}")
+
+    def _on_connect(self, client, userdata, flags, reason_code, properties):
+        with self._lock:
+            patterns = {p for p, _ in self._subs}
+        for p in patterns:  # re-subscribe after a reconnect
+            client.subscribe(p, qos=1)
+        self._connected.set()
+
+    def _on_message(self, client, userdata, msg):
+        try:
+            payload = json.loads(msg.payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            print(f"[mqtt] ignored a non-JSON message on {msg.topic}")
+            return
+        with self._lock:
+            targets = [h for pat, h in self._subs if topic_matches(pat, msg.topic)]
+        for handler in targets:
+            try:
+                handler(msg.topic, payload)
+            except Exception as exc:
+                print(f"[mqtt] handler error on {msg.topic}: {exc!r}")
+
+    def publish(self, topic: str, payload: dict, qos: int = 0, retain: bool = False) -> None:
+        self.client.publish(topic, json.dumps(payload), qos=qos, retain=retain)
+
+    def subscribe(self, pattern: str, handler: Handler) -> None:
+        with self._lock:
+            self._subs.append((pattern, handler))
+        self.client.subscribe(pattern, qos=1)
+
+    def flush(self, timeout: float = 5.0) -> None:
+        time.sleep(0.2)
+
+    def close(self) -> None:
+        self.client.loop_stop()
+        self.client.disconnect()

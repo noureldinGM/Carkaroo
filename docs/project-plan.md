@@ -20,21 +20,24 @@ Capstone requirements this plan covers (G12 2026/2027, "IT and AI Applications")
 
 ## Phase 1: AI brain ✅ (simulation)
 - [x] Factory track as a graph; routes as one command per junction; blocked lines and re-routing
-- [x] Usage-rate forecaster (EWMA) from load-cell readings
+- [x] Usage-rate forecaster from load-cell readings (sliding-window slope, robust to whole-unit readings)
 - [x] Automatic need detection: no operator needed
 - [x] Safety rules (warehouse stock, room for a box, reachability, battery)
 - [x] Teacher optimizer and simple-rule baselines
-- [x] ML ranker trained on 30,000 situations: 91.5 % top-1 accuracy on unseen data
-- [x] Training on 400 random factory layouts: 91.3 % on factories it has never seen, so a new track needs no retraining
+- [x] ML ranker trained on 30,000 random situations + 18,000 live ones: 90.6 % top-1 accuracy on unseen data, 84.2 % in live operation
+- [x] Training on 400 random factory layouts: 91.2 % on factories it has never seen, so a new track needs no retraining
 - [x] Explanations ("why" + "what if")
 - [x] Demo, sensitivity sweep, evaluation report, tests
 
-## Phase 2: Communication and cloud
-- [ ] Install Mosquitto on the laptop; bridge `factory/#` to HiveMQ Cloud (free tier)
-- [ ] `agv_brain/link.py`: an MQTT client that feeds stock readings to the forecaster, runs the dispatcher, sends tasks and handles car events (obstacle → wait → re-route)
-- [ ] `SimulatedCar` and `SimulatedStation` that speak the same MQTT messages, so the whole system runs without hardware
-- [ ] Log every reading, decision and car event to CSV (data for retraining and the logbook)
-- [ ] Measure R8 (cloud delay and delivery rate)
+## Phase 2: Communication and cloud (software done; broker and cloud not yet tested)
+- [x] Message bus with the MQTT topics of [protocol.md](protocol.md): in-memory for simulation, `MqttBus` for a real broker
+- [x] `agv_brain/controller.py`: feeds stock readings to the forecaster, creates requests, runs the dispatcher, sends tasks, tracks the car, handles obstacles (wait → re-route) and charging
+- [x] `SimulatedCar` and `SimulatedStation` that speak the same messages, so the whole system runs without hardware
+- [x] Every reading, decision and car event logged to CSV in `logs/` (data for retraining and the logbook)
+- [x] Live-operation training (DAgger): live accuracy 76 % → 84 %
+- [x] Broker and cloud scripts: `start_broker.py` (with the HiveMQ Cloud bridge), `run_controller.py`, `cloud_check.py`
+- [ ] **Install Mosquitto** (`winget install --id EclipseFoundation.Mosquitto -e`, needs administrator permission) and test the real-network path
+- [ ] Create a free HiveMQ Cloud account, set it up in `config/mqtt.yaml`, and measure R8 with `cloud_check.py`
 
 ## Phase 3: Hardware
 - [ ] **Car firmware** on the BW20-12F-Kit (Ameba SDK): Wi-Fi + MQTT, IR line following with PID, junction counting, servo fork, ultrasonic stop, battery reading ([firmware/README.md](../firmware/README.md))
@@ -47,19 +50,20 @@ Capstone requirements this plan covers (G12 2026/2027, "IT and AI Applications")
 - [ ] End-to-end runs: low stock → automatic request → car delivers; measure R3 and R5
 - [ ] Obstacle tests with re-routing
 
-## Phase 5: Dashboard (car tracking)
-- [ ] Web dashboard on the laptop, mirrored in the cloud:
-  - live car position on the factory map, heading, battery, state (driving / lifting / blocked / charging)
-  - the current task and route, highlighted on the map
-  - stock bars per station with "empty in …" forecasts
-  - the AI decision, its reasons and the "what if" comparison
-  - alerts (warehouse low, obstacle, battery) and an event history
-  - charts: line-stop time, deliveries per hour, model accuracy
-- [ ] Optional manual request button, for when an operator wants to force a delivery
+## Phase 5: Dashboard (car tracking): mostly done early
+- [x] Live web dashboard on the laptop ([dashboard.md](dashboard.md)):
+  - the AI's choice in one sentence, why, and whether it is the best possible choice
+  - the queue in the AI's order, plus the detailed numbers on demand
+  - live car position on the factory map, battery and state, with the route highlighted
+  - stock bars per station with "empty in …" forecasts; alerts and an event history
+- [x] Manual request button; simulation controls (stock, obstacles, battery)
+- [ ] Cloud view of the same data (from the HiveMQ bridge)
+- [ ] Charts over time: line-stop time, deliveries per hour, model accuracy
 
-## Phase 6: Visual factory simulation
-- [ ] Animated factory: stations consuming material, the car driving its routes, obstacles appearing. It is driven by the same `agv_brain` code, so it is useful for the exhibition when the real track is not available.
-- [ ] Side-by-side mode: ML vs first come, first served on the same factory
+## Phase 6: Visual factory simulation: partly done
+- [x] Simulated factory driven by the same `agv_brain` code, shown on the dashboard (`scripts/run_factory_sim.py`)
+- [x] Headless comparison of policies (`run_factory_sim.py --compare 40`)
+- [ ] Side-by-side view: ML vs first come, first served on the same factory
 
 ## Phase 7: Improve and report
 - [ ] Retrain on logged real runs; compare simulated vs real accuracy

@@ -36,6 +36,7 @@ from agv_brain.baselines import BASELINES, rollout  # noqa: E402
 from agv_brain.dataset import speed_variants  # noqa: E402
 from agv_brain.features import JOB_FEATURES, PAIR_EXTRA, PAIR_FEATURES  # noqa: E402
 from agv_brain.layouts import layout_pool  # noqa: E402
+from agv_brain.live_dataset import live_accuracy  # noqa: E402
 from agv_brain.optimizer import best_order, first_choice_costs  # noqa: E402
 from agv_brain.ranker import DEFAULT_MODEL_PATH, PairwiseRanker, pair_examples  # noqa: E402
 from agv_brain.simulator import load_context, random_scenario, simulate  # noqa: E402
@@ -200,7 +201,7 @@ def policy_table(summary):
 
 
 def write_markdown(df, summary, pair_acc, cm, importance, df_new, summary_new, pair_acc_new,
-                   ranker, args, out):
+                   ranker, args, out, live=None):
     ml_acc = summary.loc["ml", "top1_accuracy"]
     verdict = "PASS" if ml_acc >= TARGET else "FAIL"
     by_n = df[df.policy == "ml"].groupby("n").top1.agg(["mean", "count"])
@@ -218,6 +219,10 @@ def write_markdown(df, summary, pair_acc, cm, importance, df_new, summary_new, p
         new_acc = summary_new.loc["ml", "top1_accuracy"]
         lines += [f"**AI accuracy on {args.random_layouts} factory layouts it has never seen: {new_acc:.1%} - "
                   f"target 80 %: {'PASS' if new_acc >= TARGET else 'FAIL'}**", ""]
+    if live:
+        lv = live["ml"]["top1"]
+        lines += [f"**AI accuracy in live operation (the model running the factory): {lv:.1%} - "
+                  f"target 80 %: {'PASS' if lv >= TARGET else 'FAIL'}**", ""]
     lines += [
         f"## Our track ({args.scenarios} unseen situations)",
         "",
@@ -245,6 +250,17 @@ def write_markdown(df, summary, pair_acc, cm, importance, df_new, summary_new, p
             lines += ["", f"On these new factories the ML ranker cuts line-stop time by "
                           f"{(1 - summary_new.loc['ml', 'mean_line_stop_s'] / fifo_new):.0%} "
                           "compared with first come, first served."]
+    if live:
+        lines += ["", f"## Live operation ({args.live_episodes} one-hour factory runs)", "",
+                  "Each policy runs the factory itself (half on our track, half on unseen random "
+                  "layouts): the need detector creates the requests, the policy picks every delivery, "
+                  "and every situation it meets is checked against the exact optimizer. These queues "
+                  "look different from the random test situations above (more requests at once, "
+                  "more near-ties), which is why the model was also trained on live operation "
+                  "(`scripts/train_live.py`).", "",
+                  "| Policy | Top-1 accuracy | Extra cost vs optimal | Decisions checked |", "|---|---|---|---|"]
+        for p, r in live.items():
+            lines.append(f"| {POLICY_LABELS[p]} | {r['top1']:.1%} | {r['regret_pct']:.2f} % | {r['decisions']} |")
     lines += ["", "## ML accuracy by number of requests", "",
               "| Requests | Our track | Unseen layouts |", "|---|---|---|"]
     by_n_new = (df_new[df_new.policy == "ml"].groupby("n").top1.mean()
@@ -276,6 +292,7 @@ def main() -> None:
                     help="unseen random factories to test on (0 = skip)")
     ap.add_argument("--scenarios-random", type=int, default=1000, help="situations on those factories")
     ap.add_argument("--layout-seed", type=int, default=424242)
+    ap.add_argument("--live-episodes", type=int, default=40, help="one-hour live factory runs per policy (0 = skip)")
     ap.add_argument("--min-n", type=int, default=2)
     ap.add_argument("--max-n", type=int, default=7)
     ap.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH)
@@ -305,12 +322,18 @@ def main() -> None:
         summary_new = summarize(df_new)
         pair_acc_new = ((ranker.predict_proba(Xn) > 0.5).astype(int) == yn).mean()
 
+    live = None
+    if args.live_episodes > 0:
+        live = {p: live_accuracy(ctx, fn, args.live_episodes, seed=999)
+                for p, fn in (("ml", ranker), ("weighted_rules", BASELINES["weighted_rules"]),
+                              ("earliest_stockout", BASELINES["earliest_stockout"]), ("fifo", BASELINES["fifo"]))}
+
     df.assign(test_set="our_track").pipe(
         lambda d: pd.concat([d, df_new.assign(test_set="unseen_layouts")]) if df_new is not None else d
     ).to_csv(args.out / "evaluation.csv", index=False)
     charts(df, summary, df_new, importance, args.out)
     write_markdown(df, summary, pair_acc, cm, importance, df_new, summary_new, pair_acc_new,
-                   ranker, args, args.out)
+                   ranker, args, args.out, live)
 
     pd.set_option("display.width", 160)
     print("our track\n" + summary.round(3).to_string())
@@ -320,6 +343,7 @@ def main() -> None:
         print(f"pairwise accuracy {pair_acc_new:.3f}")
     print(f"\nML top-1 accuracy: our track {summary.loc['ml', 'top1_accuracy']:.1%}"
           + (f", unseen layouts {summary_new.loc['ml', 'top1_accuracy']:.1%}" if summary_new is not None else "")
+          + (f", live operation {live['ml']['top1']:.1%}" if live else "")
           + f" (target {TARGET:.0%})")
     print(f"done in {time.perf_counter() - t0:.0f} s -> {args.out / 'evaluation.md'}")
 
