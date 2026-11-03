@@ -24,7 +24,7 @@ from agv_brain.need_detector import NeedReport, detect_needs
 from agv_brain.optimizer import MAX_EXACT, best_order
 from agv_brain.ranker import DEFAULT_MODEL_PATH, PairwiseRanker
 from agv_brain.safety import filter_jobs, needs_charge
-from agv_brain.simulator import Context, simulate
+from agv_brain.simulator import Context, fit_start_heading, simulate
 
 POLICIES = ["ml", "optimal", *BASELINES]
 
@@ -49,7 +49,9 @@ class Dispatcher:
     def from_config(cls, policy: str = "ml", model_path: str | Path | None = None,
                     layout: str | Path | None = None, materials: str | Path | None = None) -> "Dispatcher":
         settings = load_settings(materials)
-        ctx = Context(FactoryMap.from_yaml(layout, settings.car), settings)
+        fmap = FactoryMap.from_yaml(layout, settings.car)
+        fit_start_heading(settings, fmap)
+        ctx = Context(fmap, settings)
         ranker = PairwiseRanker.load(model_path) if model_path else None
         return cls(ctx, policy, ranker)
 
