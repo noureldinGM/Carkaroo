@@ -22,15 +22,16 @@ A small automated guided vehicle (AGV) carries material boxes around a factory f
 
 See [docs/architecture.md](docs/architecture.md) for the diagrams.
 
-## Results (simulation, 1000 unseen situations)
+## Results (simulation, situations the model never saw)
 
 | | ML ranker | Weighted rules (hand-made) | First come, first served | Exact optimizer |
 |---|---|---|---|---|
-| Picks the best delivery (top-1 accuracy) | **91.2 %** | 61.7 % | 26.0 % | 100 % |
-| Extra cost vs the optimal plan | **1.1 %** | 16.8 % | 149.9 % | 0 % |
-| Decision time | ~5 ms | < 0.1 ms | < 0.1 ms | grows with n! |
+| Picks the best delivery: our track (1000 situations) | **91.5 %** | 61.3 % | 26.2 % | 100 % |
+| Picks the best delivery: 200 new factory layouts | **91.3 %** | 57.7 % | 27.3 % | 100 % |
+| Extra cost vs the optimal plan (our track) | **1.1 %** | 16.8 % | 149.7 % | 0 % |
+| Decision time | ~20 ms | < 0.1 ms | < 0.1 ms | grows with n! |
 
-The ML ranker cuts production stop time by **42 %** compared with first come, first served. Its accuracy clears the capstone's **80 %** target. Full report: [reports/evaluation.md](reports/evaluation.md).
+The ML ranker cuts production stop time by **42 %** compared with first come, first served. Its accuracy clears the capstone's **80 %** target, on our track and on factories it has never seen. Training mixes our track with 400 random factory layouts, so a new or changed track needs no retraining. Full report: [reports/evaluation.md](reports/evaluation.md).
 
 ![Accuracy by number of requests](reports/accuracy_by_requests.png)
 
@@ -49,13 +50,13 @@ python -m venv .venv
 The trained model is in `models/ranker.joblib`, so the demo works right away. To rebuild everything from scratch:
 
 ```bash
-.venv\Scripts\python scripts\generate_dataset.py --scenarios 20000
+.venv\Scripts\python scripts\generate_dataset.py
 ```
 ```bash
 .venv\Scripts\python scripts\train_ranker.py
 ```
 ```bash
-.venv\Scripts\python scripts\evaluate.py --scenarios 1000
+.venv\Scripts\python scripts\evaluate.py
 ```
 ```bash
 .venv\Scripts\python -m pytest
@@ -99,7 +100,7 @@ Other things to try:
 ```
 config/            factory track (nodes, lines) and materials/stations/car settings
 agv_brain/         the AI: map, forecaster, need detector, safety, simulator,
-                   optimizer, features, ML ranker, explainer, dispatcher
+                   random layouts, optimizer, features, ML ranker, explainer, dispatcher
 scripts/           demo, dataset generation, training, evaluation, sensitivity
 models/            trained ranker
 data/sample/       sample of the training dataset (the full one is regenerated)

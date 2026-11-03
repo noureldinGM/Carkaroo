@@ -129,7 +129,7 @@ def random_car(rng: np.random.Generator, fmap: FactoryMap) -> CarState:
     if len(fmap.neighbors(node)) == 1:
         heading = fmap.arrival_heading(node)
     else:
-        came_from = [h for h, _ in fmap.neighbors(node).values()]
+        came_from = sorted(h for h, _ in fmap.neighbors(node).values())
         heading = opposite(str(rng.choice(came_from)))
     assert heading in HEADINGS
     return CarState(node, heading, float(rng.uniform(30, 100)))
@@ -165,4 +165,5 @@ def random_jobs(rng: np.random.Generator, ctx: Context, n: int) -> list[Job]:
 def random_scenario(rng: np.random.Generator, ctx: Context,
                     n_range: tuple[int, int] = (2, 6)) -> tuple[CarState, list[Job]]:
     n = int(rng.integers(n_range[0], n_range[1] + 1))
+    n = min(n, len(ctx.settings.stations) * len(ctx.settings.materials))
     return random_car(rng, ctx.fmap), random_jobs(rng, ctx, n)

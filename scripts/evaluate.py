@@ -1,9 +1,12 @@
 """Evaluate the ML ranker against the optimizer and simple rules on unseen data.
 
-    python scripts/evaluate.py --scenarios 1000
+    python scripts/evaluate.py --scenarios 1000 --random-layouts 200
 
-Uses a different random seed from training, and up to 7 requests per situation
-(training only went up to 6), so it also shows that the model generalizes.
+Two test sets, both from random seeds never used in training:
+    our track         config/factory_layout.yaml, random car position and speed
+    unseen layouts    random factories the model has never seen (other grid
+                      sizes, line lengths, numbers of materials and stations)
+Both use up to 7 requests per situation (training only went up to 6).
 
 Metrics per policy:
     top-1 accuracy   the first delivery chosen is the best one (same as the exact
@@ -32,6 +35,7 @@ from sklearn.metrics import confusion_matrix  # noqa: E402
 from agv_brain.baselines import BASELINES, rollout  # noqa: E402
 from agv_brain.dataset import speed_variants  # noqa: E402
 from agv_brain.features import JOB_FEATURES, PAIR_EXTRA, PAIR_FEATURES  # noqa: E402
+from agv_brain.layouts import layout_pool  # noqa: E402
 from agv_brain.optimizer import best_order, first_choice_costs  # noqa: E402
 from agv_brain.ranker import DEFAULT_MODEL_PATH, PairwiseRanker, pair_examples  # noqa: E402
 from agv_brain.simulator import load_context, random_scenario, simulate  # noqa: E402
@@ -66,19 +70,17 @@ FEATURE_LABELS = {
     "i_late_if_j_first_s": "This one's stop if other goes first",
     "late_diff_crit": "Who would stop longer (x criticality)",
 }
+ORDER = ["ml", "weighted_rules", "earliest_stockout", "nearest", "fifo", "optimal"]
 
 
-def run(args):
-    ctx = load_context()
-    ranker = PairwiseRanker.load(args.model)
+def run(sample_ctx, ranker, scenarios, seed, n_range):
+    """Score every policy on `scenarios` random situations. sample_ctx(rng) -> Context."""
     policies = {"ml": ranker, **BASELINES}
-    variants = speed_variants(ctx)
-    rng = np.random.default_rng(args.seed)
-
+    rng = np.random.default_rng(seed)
     rows, pair_X, pair_y = [], [], []
-    for sid in range(args.scenarios):
-        vctx = variants[int(rng.integers(len(variants)))]
-        car, jobs = random_scenario(rng, vctx, (args.min_n, args.max_n))
+    for sid in range(scenarios):
+        vctx = sample_ctx(rng)
+        car, jobs = random_scenario(rng, vctx, n_range)
         costs = first_choice_costs(vctx, jobs, car)
         best_first = min(costs)
         opt_jobs, opt_cost = best_order(vctx, jobs, car)
@@ -99,7 +101,7 @@ def run(args):
                              decision_ms=ms))
         X, y, _ = pair_examples(vctx, jobs, car, costs)
         pair_X.append(X), pair_y.append(y)
-    return pd.DataFrame(rows), ranker, np.vstack(pair_X), np.concatenate(pair_y).astype(int)
+    return pd.DataFrame(rows), np.vstack(pair_X), np.concatenate(pair_y).astype(int)
 
 
 def summarize(df):
@@ -112,14 +114,13 @@ def summarize(df):
         "decision_ms_mean": g.decision_ms.mean(),
         "decision_ms_p95": g.decision_ms.quantile(0.95),
     })
-    order = ["ml", "weighted_rules", "earliest_stockout", "nearest", "fifo", "optimal"]
-    return s.loc[[p for p in order if p in s.index]]
+    return s.loc[[p for p in ORDER if p in s.index]]
 
 
-def charts(df, summary, importance, out):
+def charts(df, summary, df_new, importance, out):
     from plot_style import ML, MUTED, SERIES, TEXT_2, finish, plt
 
-    # 1. line stop per policy
+    # 1. line stop per policy (our track)
     s = summary.drop(index="optimal").sort_values("mean_line_stop_s")
     fig, ax = plt.subplots(figsize=(7, 3.6))
     labels = [POLICY_LABELS[p] for p in s.index]
@@ -140,29 +141,32 @@ def charts(df, summary, importance, out):
 
     # 2. top-1 accuracy by number of requests
     acc = df[df.policy != "optimal"].groupby(["policy", "n"]).top1.mean().unstack(0)
-    fig, ax = plt.subplots(figsize=(7, 3.8))
-    shown = ["ml", "weighted_rules", "earliest_stockout", "fifo"]
-    # end labels, nudged apart so they never overlap (min 6 points)
-    ends = sorted(((acc[p].iloc[-1] * 100, p) for p in shown), reverse=True)
+    series = [(p, acc[p], SERIES[k], "-", POLICY_LABELS[p])
+              for k, p in enumerate(["ml", "weighted_rules", "earliest_stockout", "fifo"])]
+    if df_new is not None:
+        acc_new = df_new[df_new.policy == "ml"].groupby("n").top1.mean().reindex(acc.index)
+        series.insert(1, ("ml_new", acc_new, ML, "--", "ML ranker, unseen layouts"))
+    fig, ax = plt.subplots(figsize=(7.4, 4.0))
+    ends = sorted((v.iloc[-1] * 100, key) for key, v, *_ in series)
     label_y, prev = {}, None
-    for y, p in ends:
-        y = y if prev is None else min(y, prev - 6)
-        label_y[p], prev = y, y
-    for color, p in zip(SERIES, shown):
-        ax.plot(acc.index, acc[p] * 100, color=color, marker="o", markersize=5,
-                label=POLICY_LABELS[p])
-        ax.text(acc.index[-1] + 0.1, label_y[p], POLICY_LABELS[p], color=TEXT_2,
-                fontsize=9, va="center")
-    ax.axhline(TARGET * 100, color=TEXT_2, linestyle="--", linewidth=1)
+    for y, key in ends:  # end labels pushed up so they never overlap each other
+        y = y if prev is None else max(y, prev + 6)
+        if abs(y - TARGET * 100) < 3:  # or the 80 % target line
+            y = TARGET * 100 + 3
+        label_y[key], prev = y, y
+    for key, v, color, style, label in series:
+        ax.plot(acc.index, v * 100, color=color, linestyle=style, marker="o", markersize=5, label=label)
+        ax.text(acc.index[-1] + 0.1, label_y[key], label, color=TEXT_2, fontsize=9, va="center")
+    ax.axhline(TARGET * 100, color=TEXT_2, linestyle=":", linewidth=1)
     mid = acc.index[len(acc.index) // 2]
     ax.text(mid, TARGET * 100 - 2, "80 % target", color=TEXT_2, fontsize=9, va="top")
-    ax.set_xlim(acc.index[0] - 0.2, acc.index[-1] + 1.8)
+    ax.set_xlim(acc.index[0] - 0.2, acc.index[-1] + 2.4)
     ax.set_ylim(0, 105)
     ax.set_xticks(acc.index)
     ax.set_xlabel("Requests waiting at the same time")
     ax.set_ylabel("Chose the best delivery (%)")
-    ax.set_title("Top-1 accuracy vs the exact optimizer", pad=28)
-    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=4, fontsize=9, handlelength=1.5)
+    ax.set_title("Top-1 accuracy vs the exact optimizer", pad=46)
+    ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=3, fontsize=9, handlelength=2)
     finish(fig, out / "accuracy_by_requests.png")
 
     # 3. feature importance
@@ -185,30 +189,43 @@ def grouped_importance(ranker, X, y, rng_seed=0, max_rows=20000):
     return pd.Series(grouped)
 
 
-def write_markdown(df, summary, pair_acc, cm, importance, args, out):
-    ml_acc = summary.loc["ml", "top1_accuracy"]
-    verdict = "PASS" if ml_acc >= TARGET else "FAIL"
-    by_n = df[df.policy == "ml"].groupby("n").top1.agg(["mean", "count"])
-    lines = [
-        "# Evaluation report",
-        "",
-        f"Generated by `python scripts/evaluate.py --scenarios {args.scenarios} --seed {args.seed}`. "
-        f"{args.scenarios} unseen situations with {args.min_n}-{args.max_n} requests each "
-        "(training used 2-6), random car position and speed.",
-        "",
-        f"**AI accuracy (top-1 vs exact optimizer): {ml_acc:.1%} - target 80 %: {verdict}**",
-        "",
-        f"Pairwise accuracy (\"should i go before j?\") on the same unseen data: {pair_acc:.1%}",
-        "",
-        "## All policies",
-        "",
-        "| Policy | Top-1 accuracy | Avg line stop | Situations with a stop | Extra cost vs optimal | Decision time (mean / p95) |",
-        "|---|---|---|---|---|---|",
-    ]
+def policy_table(summary):
+    lines = ["| Policy | Top-1 accuracy | Avg line stop | Situations with a stop | Extra cost vs optimal | Decision time (mean / p95) |",
+             "|---|---|---|---|---|---|"]
     for p, r in summary.iterrows():
         ms = "-" if np.isnan(r.decision_ms_mean) else f"{r.decision_ms_mean:.2f} / {r.decision_ms_p95:.2f} ms"
         lines.append(f"| {POLICY_LABELS[p]} | {r.top1_accuracy:.1%} | {r.mean_line_stop_s:.1f} s | "
                      f"{r.scenarios_with_a_stop:.1%} | {r.mean_extra_cost_pct:.1f} % | {ms} |")
+    return lines
+
+
+def write_markdown(df, summary, pair_acc, cm, importance, df_new, summary_new, pair_acc_new,
+                   ranker, args, out):
+    ml_acc = summary.loc["ml", "top1_accuracy"]
+    verdict = "PASS" if ml_acc >= TARGET else "FAIL"
+    by_n = df[df.policy == "ml"].groupby("n").top1.agg(["mean", "count"])
+    trained_on = ranker.meta.get("layouts", "our track only")
+    lines = [
+        "# Evaluation report",
+        "",
+        f"Generated by `python scripts/evaluate.py --scenarios {args.scenarios} --seed {args.seed} "
+        f"--random-layouts {args.random_layouts}`. Model trained on: {trained_on}.",
+        "",
+        f"**AI accuracy on our track (top-1 vs exact optimizer): {ml_acc:.1%} - target 80 %: {verdict}**",
+        "",
+    ]
+    if summary_new is not None:
+        new_acc = summary_new.loc["ml", "top1_accuracy"]
+        lines += [f"**AI accuracy on {args.random_layouts} factory layouts it has never seen: {new_acc:.1%} - "
+                  f"target 80 %: {'PASS' if new_acc >= TARGET else 'FAIL'}**", ""]
+    lines += [
+        f"## Our track ({args.scenarios} unseen situations)",
+        "",
+        f"{args.min_n}-{args.max_n} requests each (training used 2-6), random car position and speed. "
+        f"Pairwise accuracy (\"should i go before j?\"): {pair_acc:.1%}.",
+        "",
+        *policy_table(summary),
+    ]
     fifo_stop = summary.loc["fifo", "mean_line_stop_s"]
     ml_stop = summary.loc["ml", "mean_line_stop_s"]
     if fifo_stop > 0:
@@ -217,12 +234,26 @@ def write_markdown(df, summary, pair_acc, cm, importance, args, out):
     lines += ["", "The test situations are deliberately overloaded (many urgent requests at once, "
                   "one car), so even the exact optimizer cannot avoid every stop. What matters is "
                   "how close each policy gets to the optimizer."]
-    lines += ["", "## ML accuracy by number of requests", "", "| Requests | Top-1 accuracy | Situations |",
-              "|---|---|---|"]
+    if summary_new is not None:
+        lines += ["", f"## Unseen factory layouts ({args.scenarios_random} situations on "
+                      f"{args.random_layouts} random factories)", "",
+                  "Grids of 2-4 x 3-6 junctions, lines 50-150 cm, 2-5 materials, 2-6 stations, "
+                  f"random car speed. Pairwise accuracy: {pair_acc_new:.1%}.", "",
+                  *policy_table(summary_new)]
+        fifo_new = summary_new.loc["fifo", "mean_line_stop_s"]
+        if fifo_new > 0:
+            lines += ["", f"On these new factories the ML ranker cuts line-stop time by "
+                          f"{(1 - summary_new.loc['ml', 'mean_line_stop_s'] / fifo_new):.0%} "
+                          "compared with first come, first served."]
+    lines += ["", "## ML accuracy by number of requests", "",
+              "| Requests | Our track | Unseen layouts |", "|---|---|---|"]
+    by_n_new = (df_new[df_new.policy == "ml"].groupby("n").top1.mean()
+                if df_new is not None else pd.Series(dtype=float))
     for n, r in by_n.iterrows():
         note = " (more than in training)" if n > 6 else ""
-        lines.append(f"| {n}{note} | {r['mean']:.1%} | {int(r['count'])} |")
-    lines += ["", "## Pairwise confusion matrix (ML)", "",
+        new = f"{by_n_new[n]:.1%}" if n in by_n_new.index else "-"
+        lines.append(f"| {n}{note} | {r['mean']:.1%} | {new} |")
+    lines += ["", "## Pairwise confusion matrix (ML, our track)", "",
               "| | predicted: j first | predicted: i first |", "|---|---|---|",
               f"| **actual: j first** | {cm[0, 0]} | {cm[0, 1]} |",
               f"| **actual: i first** | {cm[1, 0]} | {cm[1, 1]} |",
@@ -239,8 +270,12 @@ def write_markdown(df, summary, pair_acc, cm, importance, args, out):
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--scenarios", type=int, default=1000)
+    ap.add_argument("--scenarios", type=int, default=1000, help="situations on our track")
     ap.add_argument("--seed", type=int, default=20261103)
+    ap.add_argument("--random-layouts", type=int, default=200,
+                    help="unseen random factories to test on (0 = skip)")
+    ap.add_argument("--scenarios-random", type=int, default=1000, help="situations on those factories")
+    ap.add_argument("--layout-seed", type=int, default=424242)
     ap.add_argument("--min-n", type=int, default=2)
     ap.add_argument("--max-n", type=int, default=7)
     ap.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH)
@@ -249,21 +284,43 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
 
     t0 = time.perf_counter()
-    df, ranker, X, y = run(args)
+    ctx = load_context()
+    ranker = PairwiseRanker.load(args.model)
+    n_range = (args.min_n, args.max_n)
+
+    variants = speed_variants(ctx)
+    df, X, y = run(lambda rng: variants[int(rng.integers(len(variants)))], ranker,
+                   args.scenarios, args.seed, n_range)
     summary = summarize(df)
     pred = (ranker.predict_proba(X) > 0.5).astype(int)
     pair_acc = (pred == y).mean()
     cm = confusion_matrix(y, pred, labels=[0, 1])
     importance = grouped_importance(ranker, X, y)
 
-    df.to_csv(args.out / "evaluation.csv", index=False)
-    charts(df, summary, importance, args.out)
-    write_markdown(df, summary, pair_acc, cm, importance, args, args.out)
+    df_new = summary_new = pair_acc_new = None
+    if args.random_layouts > 0:
+        pool = layout_pool(args.random_layouts, args.layout_seed, ctx.settings)
+        df_new, Xn, yn = run(lambda rng: pool[int(rng.integers(len(pool)))], ranker,
+                             args.scenarios_random, args.seed + 1, n_range)
+        summary_new = summarize(df_new)
+        pair_acc_new = ((ranker.predict_proba(Xn) > 0.5).astype(int) == yn).mean()
+
+    df.assign(test_set="our_track").pipe(
+        lambda d: pd.concat([d, df_new.assign(test_set="unseen_layouts")]) if df_new is not None else d
+    ).to_csv(args.out / "evaluation.csv", index=False)
+    charts(df, summary, df_new, importance, args.out)
+    write_markdown(df, summary, pair_acc, cm, importance, df_new, summary_new, pair_acc_new,
+                   ranker, args, args.out)
 
     pd.set_option("display.width", 160)
-    print(summary.round(3).to_string())
-    print(f"\npairwise accuracy {pair_acc:.3f}")
-    print(f"ML top-1 accuracy {summary.loc['ml', 'top1_accuracy']:.1%} (target {TARGET:.0%})")
+    print("our track\n" + summary.round(3).to_string())
+    print(f"pairwise accuracy {pair_acc:.3f}")
+    if summary_new is not None:
+        print("\nunseen layouts\n" + summary_new.round(3).to_string())
+        print(f"pairwise accuracy {pair_acc_new:.3f}")
+    print(f"\nML top-1 accuracy: our track {summary.loc['ml', 'top1_accuracy']:.1%}"
+          + (f", unseen layouts {summary_new.loc['ml', 'top1_accuracy']:.1%}" if summary_new is not None else "")
+          + f" (target {TARGET:.0%})")
     print(f"done in {time.perf_counter() - t0:.0f} s -> {args.out / 'evaluation.md'}")
 
 

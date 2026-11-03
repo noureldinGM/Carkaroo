@@ -45,9 +45,10 @@ def pair_examples(ctx: Context, jobs: list[Job], car: CarState,
 
 
 class PairwiseRanker:
-    def __init__(self, model: HistGradientBoostingClassifier | None = None, meta: dict | None = None):
+    def __init__(self, model: HistGradientBoostingClassifier | None = None, meta: dict | None = None,
+                 max_iter: int = 400):
         self.model = model or HistGradientBoostingClassifier(
-            max_iter=400, learning_rate=0.08, max_leaf_nodes=31,
+            max_iter=max_iter, learning_rate=0.08, max_leaf_nodes=31,
             l2_regularization=1.0, early_stopping=True, validation_fraction=0.1,
             random_state=0)
         self.meta = meta or {}

@@ -60,8 +60,8 @@ The BW20-12F runs at 3.3 V. Power the HC-SR04 from 5 V and put a voltage divider
 ## 5. Car speed and turn times (for the AI's trip-time estimates)
 1. Time the car over a 100 cm straight line 5 times → `speed_cm_s`.
 2. Time 5 left turns, 5 right turns and 5 U-turns at a junction, then subtract the straight-line time → `turn_s`, `uturn_s`.
-3. Put the numbers in `config/materials.yaml`. The ML model was trained on car speeds from 0.6× to 1.5× of 15 cm/s (9–22.5 cm/s), so it stays valid inside that range. Outside it, run `python scripts/generate_dataset.py` and `python scripts/train_ranker.py` again; it takes under a minute.
-4. Measure the real line lengths. If a line is not straight, put its real length in `config/factory_layout.yaml` as a third value.
+3. Put the numbers in `config/materials.yaml`. The ML model was trained on car speeds from 0.6× to 1.5× of 15 cm/s (9–22.5 cm/s), so it stays valid inside that range. Outside it, change `speed_cm_s` first, then run `python scripts/generate_dataset.py` and `python scripts/train_ranker.py` again; it takes about 4 minutes.
+4. Measure the real line lengths. If a line is not straight, put its real length in `config/factory_layout.yaml` as a third value. A changed track needs no retraining: the model was also trained on 400 random factory layouts.
 
 ## 6. Battery
 Measure the battery voltage with a voltage divider on an ADC pin. Record voltage vs. percentage at full charge, half, and the cut-off, and fit a curve. Drive a known distance and record the percentage used → `battery_pct_per_m`.
