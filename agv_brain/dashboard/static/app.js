@@ -196,14 +196,14 @@ function buildMap() {
   const pad = 22;
   svg.setAttribute("viewBox", `${minX - pad} ${minY - pad} ${maxX - minX + 2 * pad} ${maxY - minY + 2 * pad}`);
 
-  // the robot car seen from above, facing east before rotation: green chassis, yellow motors,
-  // black tires, the ultrasonic sensor's two "eyes" in front and a jumper wire on top
+  // Roo seen from above, facing east before rotation: graphite body with a yellow racing stripe,
+  // yellow motors, black tires and the ultrasonic sensor's two "eyes" in front
   const car = sv("g", { class: "car" }, svg);
   const body = sv("g", {}, car);
   for (const y of [-19, 12]) sv("rect", { x: -13, y, width: 15, height: 7, rx: 2, class: "car-tire" }, body);
   sv("rect", { x: -17, y: -12, width: 34, height: 24, rx: 6, class: "car-body" }, body);
+  sv("rect", { x: -17, y: -2, width: 28, height: 4, class: "car-stripe" }, body);
   for (const y of [-13, 9]) sv("rect", { x: -11, y, width: 11, height: 4, rx: 1, class: "car-motor" }, body);
-  sv("path", { d: "M -12 -3 C -6 -9, -2 7, 6 1", class: "car-wire" }, body);
   for (const y of [-5, 5]) {
     sv("circle", { cx: 13, cy: y, r: 4, class: "car-eye" }, body);
     sv("circle", { cx: 14.5, cy: y, r: 1.7, class: "car-pupil" }, body);
