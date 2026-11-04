@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carkaroo · Design system</title>
+  <link rel="icon" href="logo/carkaroo-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="components.css">
+  <style>
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    header.top { display: flex; align-items: center; gap: 16px; padding: 14px 0; }
+    header.top nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+    header.top nav a { text-decoration: none; color: var(--ink-2); padding: 6px 12px; border-radius: var(--radius-pill); font: 500 14px var(--round); }
+    header.top nav a:hover { background: var(--line); color: var(--ink); }
+    .intro { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: center; padding: 40px 0 28px; }
+    .intro h1 { font: 600 56px/1.05 var(--round); letter-spacing: -0.02em; margin: 14px 0 12px; }
+    .intro h1 .roo { color: var(--chassis); }
+    .intro p { font-size: 18px; color: var(--ink-2); max-width: 46ch; margin: 0 0 18px; }
+    .intro .stage { background: var(--mat-bg); border: 1px solid var(--mat-edge); border-radius: var(--radius-lg); aspect-ratio: 4 / 3;
+      background-image: radial-gradient(var(--mat-dots) 1px, transparent 1.2px); background-size: 18px 18px; display: grid; place-items: center; }
+    .intro .stage svg { width: 82%; }
+    section.block { padding: 30px 0; border-top: 2px dashed var(--line); }
+    section.block > h2 { font: var(--text-h1); margin: 0 0 6px; }
+    section.block > p.lead { color: var(--ink-2); margin: 0 0 20px; max-width: 70ch; }
+    h3.sub { font: var(--text-h3); margin: 24px 0 10px; }
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .sw { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+    .sw i { display: block; height: 64px; border-bottom: 1px solid var(--line); }
+    .sw div { padding: 8px 10px 10px; font-size: 13px; }
+    .sw b { display: block; font: 500 14px var(--round); }
+    .sw code { background: none; border: 0; padding: 0; color: var(--ink-2); font-size: 12px; }
+    .sw span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .types { display: grid; gap: 10px; }
+    .ts { display: grid; grid-template-columns: 150px 1fr; gap: 16px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .ts small { color: var(--muted); font: 12px var(--mono); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .demo { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; display: grid; gap: 12px; }
+    .demo > small { color: var(--muted); font: 12px var(--mono); }
+    .spaces { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+    .spaces div { display: grid; gap: 6px; justify-items: center; font: 12px var(--mono); color: var(--ink-2); }
+    .spaces i { display: block; background: var(--motor); border-radius: 2px; }
+    .radii { display: flex; gap: 14px; flex-wrap: wrap; }
+    .radii div { width: 84px; height: 64px; background: var(--chassis-soft); border: 2px solid var(--chassis); display: grid; place-items: center; font: 12px var(--mono); }
+    .logos { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; }
+    .logos figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 22px; display: grid; gap: 12px; place-items: center; }
+    .logos figure.darkbg { background: #141613; border-color: #2d312b; }
+    .logos img { max-width: 100%; height: 72px; }
+    .logos figcaption { font-size: 13px; color: var(--ink-2); text-align: center; }
+    .logos figure.darkbg figcaption { color: #b4b8ad; }
+    .logos a { font-size: 13px; }
+    /* slide previews: 16:9 frames drawn with the tokens */
+    .slides { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .slide { aspect-ratio: 16 / 9; background: #f5f3ec; color: #1c1d1a; border-radius: 12px; position: relative; overflow: hidden;
+      border: 1px solid var(--line); container-type: inline-size; }
+    .slide::before { content: ""; position: absolute; inset: 0 0 auto; height: 2.2cqw; background: linear-gradient(to bottom,
+      #e2483d 0 20%, #f08a24 20% 40%, #f6c21c 40% 60%, #1f8a4c 60% 80%, #2f6fd0 80%); }
+    .slide .in { position: absolute; inset: 9cqw 7cqw 7cqw; display: flex; flex-direction: column; justify-content: center; gap: 2cqw; }
+    .slide .corner { position: absolute; right: 3cqw; bottom: 3cqw; width: 8cqw; }
+    .slide h4 { font: 600 6.4cqw/1.08 var(--round); margin: 0; letter-spacing: -0.01em; }
+    .slide p { font: 400 2.8cqw/1.4 var(--sans); margin: 0; color: #545750; }
+    .slide .hl { background: #f6c21c; color: #2a2305; padding: 0 1cqw; border-radius: 1cqw; }
+    .slide .num { font: 600 20cqw/0.9 var(--round); color: #1a7f45; letter-spacing: -0.03em; }
+    .slide .steps { display: flex; align-items: center; gap: 0; }
+    .slide .steps span { font: 500 2.5cqw var(--round); background: #fff; border: 0.3cqw solid #22221f; border-radius: 99px; padding: 1cqw 2cqw; white-space: nowrap; }
+    .slide .steps i { flex: 1; height: 0.8cqw; background: #22221f; min-width: 2cqw; }
+    .slide .steps span.on { background: #f6c21c; }
+    .slide.dark { background: #141613; color: #ecefe6; }
+    .slide.dark p { color: #b4b8ad; }
+    .slide-cap { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+    .dd { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .dd ul { margin: 0; padding-left: 20px; }
+    .dd li { margin: 4px 0; }
+    .theme-btn { margin-left: 8px; }
+    footer.foot { padding: 28px 0 44px; color: var(--muted); font-size: 13px; border-top: 2px dashed var(--line); display: flex; gap: 10px; align-items: center; }
+    @media (max-width: 860px) { .intro, .grid2, .grid3, .logos, .dd { grid-template-columns: 1fr; } .intro h1 { font-size: 42px; } }
+  </style>
+</head>
+<body>
+  <div class="ribbon" aria-hidden="true"></div>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="#">
+        <img class="brand-mark" src="logo/carkaroo-mark.svg" alt="">
+        <span class="brand-name">Carka<span class="roo">roo</span></span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#logo">Logo</a><a href="#color">Color</a><a href="#type">Type</a><a href="#shape">Shape</a>
+        <a href="#components">Components</a><a href="#map">Map & 3D</a><a href="#slides">Slides</a><a href="#rules">Rules</a>
+      </nav>
+      <button class="ghost small theme-btn" id="theme" type="button">Dark</button>
+    </header>
+
+    <section class="intro">
+      <div>
+        <span class="eyebrow">Design system</span>
+        <h1>Carka<span class="roo">roo</span></h1>
+        <p><b>Car + kangaroo.</b> A kangaroo carries what matters in its pouch; Roo, our AI delivery car, carries boxes to the
+          stations before they run out. Everything here is built from the real robot kit.</p>
+        <div class="row">
+          <a class="button" href="README.md">Read the brand book</a>
+          <a class="button ghost" href="tokens.json">tokens.json</a>
+          <a class="button ghost" href="carkaroo.js">carkaroo.js (3D)</a>
+        </div>
+      </div>
+      <div class="stage"><img src="logo/carkaroo-mark.svg" alt="Roo, the Carkaroo car" style="width:70%"></div>
+    </section>
+
+    <section class="block" id="logo">
+      <h2>Logo</h2>
+      <p class="lead">Carka in ink, roo in chassis green, set in Fredoka. Leave one wheel of space around it. Never recolor or stretch Roo.</p>
+      <div class="logos">
+        <figure><img src="logo/carkaroo-logo.svg" alt="Carkaroo logo"><figcaption>Main logo, light backgrounds · <a href="logo/carkaroo-logo.svg" download>SVG</a></figcaption></figure>
+        <figure class="darkbg"><img src="logo/carkaroo-logo-dark.svg" alt="Carkaroo logo, dark"><figcaption>Dark backgrounds · <a href="logo/carkaroo-logo-dark.svg" download style="color:#b4b8ad">SVG</a></figcaption></figure>
+        <figure><img src="logo/roo-top.svg" alt="Roo from above"><figcaption>Roo from above: maps, 3D reference · <a href="logo/roo-top.svg" download>SVG</a></figcaption></figure>
+      </div>
+    </section>
+
+    <section class="block" id="color">
+      <h2>Color</h2>
+      <p class="lead">Every color comes from the kit and has one job. Yellow is a highlight, never text. Materials always carry their letter.</p>
+      <h3 class="sub">The robot kit</h3>
+      <div class="swatches" id="sw-brand"></div>
+      <h3 class="sub">Surfaces and text</h3>
+      <div class="swatches" id="sw-surface"></div>
+      <h3 class="sub">Status and the map</h3>
+      <div class="swatches" id="sw-status"></div>
+      <h3 class="sub">Materials</h3>
+      <div class="swatches" id="sw-material"></div>
+    </section>
+
+    <section class="block" id="type">
+      <h2>Type</h2>
+      <p class="lead">Fredoka for headings, buttons and big numbers. IBM Plex Sans for reading. IBM Plex Mono for times and IDs. Sentence case.</p>
+      <div class="types">
+        <div class="ts"><small>display · 42</small><span style="font:var(--text-display)">Bring B to Packaging</span></div>
+        <div class="ts"><small>h1 · 32</small><span style="font:var(--text-h1)">How the AI decided</span></div>
+        <div class="ts"><small>h2 · 21</small><span style="font:var(--text-h2)">Warehouse</span></div>
+        <div class="ts"><small>h3 · 18</small><span style="font:var(--text-h3)">Factory mode</span></div>
+        <div class="ts"><small>number · 28</small><span style="font:var(--text-num)">91.2%</span></div>
+        <div class="ts"><small>body · 15</small><span style="font:var(--text-body)">S3 has 2 B left and runs out in 2 min 10 s. The trip takes 48 s.</span></div>
+        <div class="ts"><small>small · 13</small><span style="font:var(--text-small);color:var(--ink-2)">Measured by its load cells. The line shows the safety level.</span></div>
+        <div class="ts"><small>code · 13</small><span style="font:var(--text-code)">factory/car/status · 12:04 · S2-B</span></div>
+      </div>
+    </section>
+
+    <section class="block" id="shape">
+      <h2>Shape, space and depth</h2>
+      <p class="lead">A 4 px grid, round corners, and toy-block depth: a darker bottom edge on anything you can press.</p>
+      <div class="grid2">
+        <div class="demo"><small>spacing</small><div class="spaces" id="spaces"></div></div>
+        <div class="demo"><small>radius</small><div class="radii">
+          <div style="border-radius:var(--radius-xs)">6</div><div style="border-radius:var(--radius-sm)">10</div>
+          <div style="border-radius:var(--radius-md)">14</div><div style="border-radius:var(--radius-lg)">18</div>
+          <div style="border-radius:var(--radius-pill)">pill</div></div></div>
+      </div>
+    </section>
+
+    <section class="block" id="components">
+      <h2>Components</h2>
+      <p class="lead">From <code>components.css</code>. The website uses exactly these.</p>
+      <div class="grid3">
+        <div class="demo"><small>buttons</small>
+          <div class="row"><button type="button">Apply</button><button class="ghost" type="button">Cancel</button><button class="go" type="button">Start</button></div>
+          <div class="row"><button class="small" type="button">Refilled</button><button class="small ghost" type="button">Copy</button><button type="button" disabled>Saving…</button></div>
+        </div>
+        <div class="demo"><small>materials</small>
+          <div class="row"><span class="mat A">A</span><span class="mat B">B</span><span class="mat C">C</span>
+            <span class="mat big A">A</span><span class="mat big B">B</span><span class="mat big C">C</span></div>
+        </div>
+        <div class="demo"><small>badges, tags, pills</small>
+          <div class="row"><span class="badge good">✓ Best possible choice</span><span class="badge warn">≈ Almost best</span></div>
+          <div class="row"><span class="badge crit">⚡ Battery too low</span><span class="tag way">on the way</span><span class="tag out">stopped</span></div>
+          <div class="row"><span class="mode-pill sim">Simulation</span><span class="mode-pill real">Real factory</span><span class="link on">Live</span><span class="link off">Offline</span></div>
+        </div>
+        <div class="demo"><small>eyebrow + display</small>
+          <span class="eyebrow" style="justify-self:start">The AI's choice</span>
+          <div style="font:var(--text-h1);display:flex;align-items:center;gap:10px;flex-wrap:wrap">Bring <span class="mat big B">B</span> to Packaging</div>
+        </div>
+        <div class="demo"><small>KPI tiles</small>
+          <div class="row" style="flex-wrap:nowrap">
+            <div class="kpi" style="flex:1"><b>14</b><span>deliveries</span></div>
+            <div class="kpi bad" style="flex:1"><b>1 min</b><span>lines stopped</span></div>
+          </div>
+        </div>
+        <div class="demo"><small>stock bar + alert</small>
+          <div class="sbar"><div class="fill" style="width:72%"></div><div class="safety" style="left:30%"></div></div>
+          <div class="sbar"><div class="fill low" style="width:26%"></div><div class="safety" style="left:30%"></div></div>
+          <div class="alert">Warehouse has less than one box of C left.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="map">
+      <h2>The map and the 3D simulation</h2>
+      <p class="lead">The factory is a white track mat with black tape. The route is a yellow highlighter under the tape. The 3D world uses the same
+        colors as matte toy plastic: see <code>carkaroo.js</code> and section 8 of the brand book.</p>
+      <div class="grid2">
+        <div class="floor-card">
+          <svg viewBox="0 0 420 220" style="display:block;width:100%" role="img" aria-label="Example track with a route and Roo">
+            <path d="M40 60 H210 V170 H330" stroke="#f6c21c" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>
+            <path d="M330 170 H380 V60" stroke="#f6c21c" stroke-width="9" stroke-dasharray="2 12" fill="none" stroke-linecap="round" opacity=".8"/>
+            <path d="M40 60 H380 V170 H40 Z M210 60 V170" stroke="#22221f" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <g><rect x="352" y="22" width="56" height="26" rx="6" fill="#fff" stroke="#f6c21c" stroke-width="3"/>
+              <text x="362" y="40" font-family="Fredoka, sans-serif" font-weight="600" font-size="13" fill="#1c1d1a">S3</text>
+              <circle cx="396" cy="35" r="4.5" fill="#f0a417"/></g>
+            <g><rect x="12" y="182" width="58" height="26" rx="6" fill="#fff" stroke="#cfccbf"/>
+              <rect x="18" y="187" width="16" height="16" rx="4" fill="#1d7a6c"/>
+              <text x="22" y="200" font-family="Fredoka, sans-serif" font-weight="600" font-size="12" fill="#fff">B</text>
+              <text x="40" y="200" font-family="Fredoka, sans-serif" font-weight="600" font-size="12" fill="#1c1d1a">W</text></g>
+            <image href="logo/roo-top.svg" x="190" y="96" width="40" height="44" transform="rotate(90 210 118)"/>
+          </svg>
+        </div>
+        <div class="demo">
+          <small>3D in a sentence</small>
+          <p style="margin:0">1 unit = 1 metre. Paper-colored background and fog, a warm sun from the upper right, matte plastic everywhere.
+            Roo drives at the real timings (15 cm/s, 2 s per turn) and does one small hop after each delivery.</p>
+          <pre class="snippet">const K = window.CARKAROO;
+scene.background = new THREE.Color(K.scene.background);
+const body = new THREE.MeshStandardMaterial(K.three.chassis);
+const route = new THREE.MeshBasicMaterial(K.three.route);</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="slides">
+      <h2>Slides</h2>
+      <p class="lead">16:9, paper background, the ribbon on top, Roo in the corner. Titles say the point. One yellow highlight per slide.</p>
+      <div class="slides">
+        <div><div class="slide"><div class="in">
+          <img src="logo/carkaroo-logo.svg" alt="" style="width:62%">
+          <p>The AI delivery car that carries what the line needs, before it runs out.</p>
+          <p style="font-size:2.2cqw">G12 Capstone · 2026/27</p></div></div>
+          <div class="slide-cap">Title</div></div>
+        <div><div class="slide"><div class="in">
+          <div class="num">91%</div>
+          <h4 style="font-size:4.4cqw">of the time Roo picks the <span class="hl">best delivery</span></h4>
+          <p>Tested on 200 factories it never saw.</p></div>
+          <img class="corner" src="logo/carkaroo-mark.svg" alt=""></div>
+          <div class="slide-cap">One big number</div></div>
+        <div><div class="slide"><div class="in">
+          <h4>How Roo decides</h4>
+          <div class="steps"><span>Load cells weigh</span><i></i><span>AI ranks</span><i></i><span class="on">Roo delivers</span></div>
+          <p>Every station is weighed, the AI ranks the requests, Roo takes the first one.</p></div>
+          <img class="corner" src="logo/carkaroo-mark.svg" alt=""></div>
+          <div class="slide-cap">How it works</div></div>
+        <div><div class="slide dark"><div class="in" style="align-items:center;text-align:center">
+          <img src="logo/carkaroo-mark.svg" alt="" style="width:22%">
+          <h4>Thank you</h4>
+          <p>Come watch Roo drive at our stand.</p></div></div>
+          <div class="slide-cap">Closing (dark)</div></div>
+      </div>
+    </section>
+
+    <section class="block" id="rules">
+      <h2>Do and don't</h2>
+      <div class="dd">
+        <div class="demo"><small>do</small><ul>
+          <li>Use kit colors for their jobs</li><li>Put the letter on every material color</li>
+          <li>Say the decision in one plain sentence, with numbers</li><li>Matte, toy-like shapes with a press edge</li>
+          <li>One fun touch per screen</li></ul></div>
+        <div class="demo"><small>don't</small><ul>
+          <li>Blue–purple "AI" gradients, glowing brains, circuit art</li><li>Color alone to tell A, B and C apart</li>
+          <li>Jargon: "inference", "optimal policy"</li><li>Glass, neon, heavy drop shadows</li>
+          <li>Jokes in errors or safety messages</li></ul></div>
+      </div>
+    </section>
+
+    <footer class="foot"><img src="logo/carkaroo-mark.svg" alt="" style="width:26px"> Carkaroo design system · source files in <code>design/</code></footer>
+  </div>
+
+  <script>
+    // swatches read the live CSS variables, so they always match tokens.css
+    const groups = {
+      "sw-brand": [["chassis", "primary, buttons"], ["chassis-bright", "Roo in drawings"], ["chassis-soft", "highlights"],
+        ["motor", "route, highlight"], ["tire", "tires, tape"], ["sonar", "drawings only"], ["wire-red", "drawings only"], ["wire-orange", "drawings only"]],
+      "sw-surface": [["paper", "background"], ["card", "cards"], ["ink", "text"], ["ink-2", "secondary text"], ["muted", "hints"],
+        ["line", "dividers"], ["line-2", "borders"], ["mat-bg", "track mat"]],
+      "sw-status": [["good", "good text"], ["warn", "warning text"], ["crit", "problem text"], ["stop", "blocked, obstacle"],
+        ["charge", "charging"], ["offline", "offline car"], ["stock-low", "low stock"]],
+      "sw-material": [["material-a", "A · steel"], ["material-b", "B · plastic"], ["material-c", "C · copper"], ["material-x", "other"]],
+    };
+    function paint() {
+      const cs = getComputedStyle(document.documentElement);
+      for (const [id, list] of Object.entries(groups)) {
+        document.getElementById(id).innerHTML = list.map(([n, job]) => {
+          const v = cs.getPropertyValue("--" + n).trim();
+          return `<div class="sw"><i style="background:${v}"></i><div><b>${n}</b><code>${v}</code><span>${job}</span></div></div>`;
+        }).join("");
+      }
+    }
+    document.getElementById("spaces").innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map((i) =>
+      `<div><i style="width:var(--space-${i});height:var(--space-${i})"></i>${getComputedStyle(document.documentElement).getPropertyValue("--space-" + i).trim()}</div>`).join("");
+    const btn = document.getElementById("theme");
+    const darkNow = () => document.documentElement.dataset.theme === "dark"
+      || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+    function label() { btn.textContent = darkNow() ? "Light" : "Dark"; }
+    btn.addEventListener("click", () => { document.documentElement.dataset.theme = darkNow() ? "light" : "dark"; label(); paint(); });
+    label(); paint();
+  </script>
+</body>
+</html>
