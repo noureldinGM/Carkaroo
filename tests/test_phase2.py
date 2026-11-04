@@ -131,7 +131,7 @@ def test_dashboard_serves_state_and_requests():
     assert {n["id"] for n in snap["layout"]["nodes"]} >= {"HOME", "S1", "W-A", "J1"}
     assert b"Carkaroo" in urllib.request.urlopen(base).read()
     # the design system is served next to the website, and nothing outside design/ leaks through
-    assert b"--chassis" in urllib.request.urlopen(f"{base}/design/tokens.css").read()
+    assert b"--signal" in urllib.request.urlopen(f"{base}/design/tokens.css").read()
     assert b"Design system" in urllib.request.urlopen(f"{base}/design").read()
     with pytest.raises(urllib.error.HTTPError):
         urllib.request.urlopen(f"{base}/design/../README.md")
