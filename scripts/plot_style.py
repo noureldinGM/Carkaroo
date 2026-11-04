@@ -1,17 +1,20 @@
-"""Shared matplotlib style for the report charts (light mode, static PNG)."""
+"""Shared matplotlib style for the report charts: the Carkaroo look (light mode, static PNG)."""
 
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-SURFACE = "#fcfcfb"
-TEXT = "#0b0b0b"
-TEXT_2 = "#52514e"
-GRID = "#e4e3df"
+# Carkaroo colors (design/tokens.css): charts sit on the paper background,
+# our AI is always chassis green, baselines get the other kit colors or grey.
+SURFACE = "#f5f3ec"        # paper
+TEXT = "#1c1d1a"           # ink
+TEXT_2 = "#545750"         # ink-2
+GRID = "#e4e2d8"           # line
 MUTED = "#b9b8b2"          # bars that are not the focus
-SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"]
+SERIES = ["#1a7f45", "#2f6fd0", "#c4570f", "#6b6e66", "#e2483d", "#23231f"]  # chassis, sonar, wire orange, grey, wire red, tire
 ML = SERIES[0]
+MATERIAL = {"A": "#3566a8", "B": "#1d7a6c", "C": "#b35a1f"}
 
 plt.rcParams.update({
     "figure.facecolor": SURFACE,
@@ -33,6 +36,8 @@ plt.rcParams.update({
     "font.size": 10,
     "legend.frameon": False,
     "lines.linewidth": 2,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["IBM Plex Sans", "Segoe UI", "DejaVu Sans"],
 })
 
 
