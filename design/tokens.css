@@ -1,0 +1,108 @@
+/* Carkaroo design tokens: the "Night Race" theme.
+   One look for the poster, the portfolio, the website, slides and the 3D simulation:
+   monochrome racing (asphalt, chrome, fog, checkered flags, slanted banners, thick outlines)
+   with ONE signal color, the yellow of Roo's motors.
+   Mirrored in design/tokens.json (slides, Canva, charts) and design/carkaroo.js (3D).
+   Change a value here first, then in those two files. */
+
+:root {
+  /* ---- surfaces and text (light = the fog of the poster) ---- */
+  --paper: #eceeee;        /* page / slide background: fog */
+  --card: #ffffff;         /* cards, panels, tables */
+  --ink: #121314;          /* text and thick outlines: asphalt */
+  --ink-2: #4a4e53;        /* secondary text */
+  --muted: #63686e;        /* hints, timestamps (4.8:1 on paper) */
+  --line: #d9dcde;         /* dividers, empty bars */
+  --line-2: #7f848a;       /* input and ghost-button borders (3:1) */
+  --outline: #121314;      /* the thick racing outline on panels */
+
+  /* ---- the race ---- */
+  --primary: #121314;      /* buttons, active tab, banners: asphalt */
+  --primary-ink: #ffffff;  /* text on primary */
+  --primary-soft: #e2e4e6; /* selected rows, soft fills */
+  --signal: #f6c21c;       /* Roo's motor yellow: the ONE accent. Route, highlights, key numbers on dark, focus */
+  --signal-ink: #121314;   /* text on signal */
+  --chrome: #8b9096;       /* metal: banner caps, sonar, dividers on dark */
+  --chrome-light: #c9cdd1; /* light metal */
+  --tire: #121314;         /* tires, checker squares */
+  --roo: #2a2d31;          /* Roo's body in drawings and 3D: graphite */
+
+  /* ---- status (the only other colors, small and meaningful) ---- */
+  --good: #1d6b3f;  --good-bg: #e2efe6;
+  --warn: #946006;  --warn-bg: #fbefcf;
+  --crit: #b7372a;  --crit-bg: #f8e0db;
+  --stop: #d9483b;         /* obstacle / blocked line on the map */
+  --charge: #7fd39f;       /* charging */
+  --offline: #9a9c94;      /* offline car */
+  --stock-ok: #3f9a62;     /* stock dot OK */
+  --stock-low: #f0a417;    /* stock dot / bar low */
+
+  /* ---- materials: one color each, always with its letter ---- */
+  --material-a: #3566a8;   /* A, steel blue */
+  --material-b: #1d7a6c;   /* B, plastic teal */
+  --material-c: #b35a1f;   /* C, copper */
+  --material-x: #6b665c;
+
+  /* ---- the track: a lit white board with black tape (stays light at night) ---- */
+  --mat-bg: #f4f5f5;  --mat-edge: #c9cdd1;  --mat-tape: #121314;
+  --mat-text: #121314;  --mat-sub: #5d6268;  --mat-dots: rgb(0 0 0 / .08);
+
+  /* ---- type: condensed italic for speed, Plex for reading ---- */
+  --display: "Barlow Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;  /* headings, banners, numbers */
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;                         /* body text */
+  --mono: "IBM Plex Mono", Consolas, "Courier New", monospace;                        /* times, IDs, code */
+  --text-display: italic 700 48px/1.02 var(--display);
+  --text-h1: italic 700 38px/1.05 var(--display);
+  --text-h2: italic 700 24px/1.1 var(--display);
+  --text-h3: italic 700 20px/1.15 var(--display);
+  --text-banner: italic 700 17px/1 var(--display);   /* uppercase, on slanted banners only */
+  --text-body: 400 15px/1.55 var(--sans);
+  --text-small: 400 13px/1.45 var(--sans);
+  --text-num: italic 700 34px/1 var(--display);
+  --text-code: 400 13px/1.5 var(--mono);
+
+  /* ---- spacing: 4 px steps ---- */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px;  --space-8: 36px;
+
+  /* ---- shape ---- */
+  --radius-xs: 4px;    /* code, chips */
+  --radius-sm: 8px;    /* buttons, inputs */
+  --radius-md: 14px;   /* tiles */
+  --radius-lg: 20px;   /* panels (the poster's rounded boxes) */
+  --radius-pill: 999px;
+  --stroke: 2.5px;     /* the racing outline */
+  --skew: -12deg;      /* slanted banners and tags */
+  --checker: 6px;      /* one checker square */
+
+  /* ---- depth: a yellow kerb under things, not floating shadows ---- */
+  --shadow-press: inset 0 -3px 0 rgb(0 0 0 / .35);
+  --kerb: 0 5px 0 var(--signal);       /* the yellow bottom edge of panels and KPI tiles */
+  --ring: 0 0 0 3px var(--signal);
+
+  /* ---- motion ---- */
+  --ease: cubic-bezier(.3, .7, .4, 1);
+  --fast: .15s;  --move: .3s;
+
+  color-scheme: light;
+}
+
+/* Dark = the night race. Same family, lights off. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111214; --card: #1b1d20; --ink: #eef0f0; --ink-2: #b9bec4; --muted: #8f959b;
+    --line: #2a2d31; --line-2: #6a6f75; --outline: #4a4e53;
+    --primary: #eef0f0; --primary-ink: #121314; --primary-soft: #26292d;
+    --good: #5dc287; --good-bg: #16261c; --warn: #e7b04c; --warn-bg: #33280f; --crit: #ec7b6d; --crit-bg: #3a1d19;
+    --mat-bg: #e3e5e6; --mat-edge: #2a2d31;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111214; --card: #1b1d20; --ink: #eef0f0; --ink-2: #b9bec4; --muted: #8f959b;
+  --line: #2a2d31; --line-2: #6a6f75; --outline: #4a4e53;
+  --primary: #eef0f0; --primary-ink: #121314; --primary-soft: #26292d;
+  --good: #5dc287; --good-bg: #16261c; --warn: #e7b04c; --warn-bg: #33280f; --crit: #ec7b6d; --crit-bg: #3a1d19;
+  --mat-bg: #e3e5e6; --mat-edge: #2a2d31;
+  color-scheme: dark;
+}

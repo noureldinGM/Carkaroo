@@ -18,7 +18,7 @@ The model was trained only on simulated factories. Here it works in real ones: t
 
 | Policy | Top-1 accuracy | Avg line stop | Situations with a stop | Extra cost vs optimal | Decision time (mean / p95) |
 |---|---|---|---|---|---|
-| ML ranker | 85.6% | 799.5 s | 87.0% | 3.0 % | 21.09 / 26.65 ms |
+| ML ranker | 85.6% | 799.5 s | 87.0% | 3.0 % | 20.92 / 28.69 ms |
 | Weighted rules | 41.7% | 1418.7 s | 87.7% | 64.1 % | 0.05 / 0.08 ms |
 | Earliest stockout | 48.8% | 1171.6 s | 86.8% | 48.9 % | 0.01 / 0.02 ms |
 | Nearest first | 50.7% | 860.4 s | 91.0% | 55.2 % | 0.05 / 0.08 ms |

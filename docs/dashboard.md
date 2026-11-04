@@ -27,7 +27,7 @@ Yes. The website and the AI never talk to the car directly: they only read and s
 
 ## The pages
 
-The look follows the robot kit itself: a green chassis, yellow motors, a jumper-wire ribbon under the header, and the floor drawn as a white track mat with black lines, like the one the IR sensors follow. The materials keep one color everywhere: A steel blue, B plastic green, C copper. The letter is always on the chip, so color is never the only clue.
+The look comes from the **Carkaroo design system** in [`design/`](../design/README.md) (style guide at http://localhost:8050/design/), theme **Night Race**: the monochrome racing look of the project poster and portfolio (asphalt, chrome, fog, checkered finish strip, slanted banners, thick outlines) with one signal color, the yellow of Roo's motors. The floor is a lit white track board with black tape, and the yellow band is Roo's route. The materials keep one color everywhere: A steel blue, B plastic teal, C copper. The letter is always on the chip, so color is never the only clue. The car is called **Roo** on the pages.
 
 **Now** (the main page):
 - the AI's choice in one sentence: *"Bring B to Packaging"*;

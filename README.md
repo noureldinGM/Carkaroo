@@ -1,4 +1,6 @@
-# Capstone AVG: AI dispatcher for a factory line-follower car
+# Carkaroo: AI dispatcher for a factory line-follower car
+
+**Carkaroo** = car + kangaroo: like a kangaroo with its pouch, our car **Roo** carries boxes to the stations before they run out.
 
 A small automated guided vehicle (AGV) carries material boxes around a factory floor. Every station weighs its own bins, so the system always knows how much stock is left. When stations need material, an **AI running on the laptop** decides **which delivery goes first** and sends the car a route it can follow, junction by junction.
 
@@ -153,6 +155,7 @@ This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). Its
 ## Documents
 - [Project plan and roadmap](docs/project-plan.md)
 - [Live dashboard](docs/dashboard.md)
+- [Carkaroo design system](design/README.md): colors, logo, type, 3D and slide rules (live style guide at http://localhost:8050/design/)
 - [Architecture](docs/architecture.md)
 - [Communication protocol (MQTT)](docs/protocol.md)
 - [Measurable design requirements](docs/design-requirements.md)

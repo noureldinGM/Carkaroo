@@ -10,16 +10,17 @@ The capstone asks for a rubric to judge the machine-learning algorithm. Each cri
 | **Effect on the factory** (line-stop time vs first come, first served) | ≥ 40 % less | 25–40 % | 10–25 % | < 10 % | 42 % less → **4** |
 | **Generalization: new factory layouts** (accuracy drop on factories never seen) | ≤ 5 points | ≤ 10 | ≤ 20 | > 20 | 91.1 % on 200 new layouts vs 91.6 %: a drop of 0.5 → **4**. On 14 **real** factory layouts (KIT data set, never used for training): 85.6 %, a drop of 6.0, which alone would score 3 |
 | **Generalization: more requests than in training** (7 vs 2–6) | ≤ 5 points | ≤ 10 | ≤ 20 | > 20 | 86.1 % vs 92.7 % average, a drop of 6.6 → **3** |
-| **Speed** (time per decision on the laptop) | ≤ 20 ms | ≤ 100 ms | ≤ 500 ms | > 500 ms | about 10–20 ms mean depending on the laptop's load (19.5 ms mean, 23.5 ms p95 in the latest run) → **4** |
+| **Speed** (time per decision on the laptop) | ≤ 20 ms | ≤ 100 ms | ≤ 500 ms | > 500 ms | 20.5 ms mean, 28 ms p95 measured on its own (2026-11-04, with other programs running; the same kind of model measured 9–12 ms on a quiet laptop) → **3** |
 | **Dataset quality** (size, labels, balance, held-out test) | ≥ 10k situations, exact labels, balanced, separate test seed | 2 of those weaker | 3 weaker | no held-out test | 30k random situations + 18k live situations + 12k in large factories, exact optimizer labels, 50/50, separate seeds → **4** |
 | **Explainability** (can it say why?) | reasons + what-if for every decision + feature importance | reasons only | importance only | none | all three, live on the dashboard → **4** |
 | **Robustness / safety** (what happens when the ML is wrong or unsure) | hard safety rules first, optimizer cross-check, fallback policy | 2 of 3 | 1 of 3 | none | safety rules + "optimizer agrees" check + rules fallback → **4** |
 
-**Total: 38 / 40**
+**Total: 37 / 40**
 
-Where the two missing points come from:
+Where the three missing points come from:
 - **Live operation (84 %):** live queues have many near-ties, and its mistakes are small: on average 0.8 % more cost than the best choice. More rounds of live training (`scripts/train_live.py --rounds 3`) would likely raise it a little more.
 - **7 requests at once:** training stops at 6. Training with up to 7–8 would likely fix it.
+- **Speed (20.5 ms):** just over the 20 ms line, measured while other programs were busy on the laptop. Re-measure on a quiet laptop before the exhibition: v2 and v3 measured 9–12 ms that way.
 
 ## How each number is produced
 - Accuracy (offline and live), the rule comparison, factory effect, both generalization rows and speed come from `python scripts/evaluate.py` → `reports/evaluation.md`.
