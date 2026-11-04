@@ -145,10 +145,19 @@ def random_car(rng: np.random.Generator, fmap: FactoryMap) -> CarState:
     return CarState(node, heading, float(rng.uniform(30, 100)))
 
 
-def random_jobs(rng: np.random.Generator, ctx: Context, n: int) -> list[Job]:
+def random_jobs(rng: np.random.Generator, ctx: Context, n: int,
+                combos: list[tuple[str, str]] | None = None,
+                weights: np.ndarray | None = None) -> list[Job]:
+    """`combos`: the (station, material) pairs that can be requested (default: all of
+    them). `weights`: how often each one is requested (default: all equally)."""
     s = ctx.settings
-    combos = [(st, m) for st in s.stations for m in s.materials]
-    picks = rng.choice(len(combos), size=n, replace=False)
+    if combos is None:
+        combos = [(st, m) for st in s.stations for m in s.materials]
+    if weights is None:
+        picks = rng.choice(len(combos), size=n, replace=False)
+    else:
+        p = np.asarray(weights, dtype=float)
+        picks = rng.choice(len(combos), size=n, replace=False, p=p / p.sum())
     jobs = []
     for k in picks:
         station, material = combos[int(k)]

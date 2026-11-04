@@ -1,0 +1,2 @@
+# Downloaded data sets: keep the files byte-for-byte as published
+data/external/** -text
