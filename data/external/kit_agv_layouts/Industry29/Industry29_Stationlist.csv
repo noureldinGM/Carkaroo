@@ -1,0 +1,12 @@
+Station-ID;Type;x-Coordinate;y-Coordinate;Origin Station-ID
+E;Q;84;255;
+H;S;111;188;
+K;Q;52,8;199;T17
+L;S;38,1;195,7;
+N;Q;52,8;181,5;T20
+O;Q;52,8;174,3;T21
+Q;Q;52,8;165;T23
+R;S;52;121,8;
+U;S;42,2;82,7;
+V;S;42,2;156,7;
+W;Q,S;89,5;240,7;

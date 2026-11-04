@@ -1,0 +1,12 @@
+Job-ID;Startstation;Endstation;Distance;Frequency
+Job_From_T12_To_H;T12;H;7;1.5
+Job_From_T12_To_M;T12;M;8;1.5
+Job_From_T12_To_P;T12;P;8;1.5
+Job_From_T12_To_Q;T12;Q;26;1.5
+Job_From_T12_To_S;T12;S;27;1.5
+Job_From_T12_To_T7;T12;T7;28;4.5
+Job_From_T7_To_H;T7;H;14;1.5
+Job_From_T7_To_M;T7;M;21;1.5
+Job_From_T7_To_P;T7;P;21;3.0
+Job_From_T7_To_Q;T7;Q;39;1.5
+Job_From_T7_To_T;T7;T;36;1.5

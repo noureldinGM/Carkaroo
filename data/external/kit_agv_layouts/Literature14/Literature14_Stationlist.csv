@@ -1,0 +1,21 @@
+Station-ID;Type;x-Coordinate;y-Coordinate;Origin Station-ID
+A;Q;8;75;S1
+B;S;40;65;S2
+C;S;70;75;S3
+D;S;100;70;S4
+E;S;60;35;S5
+F;S;85;25;S6
+G;S;1;15;S7
+H;S;45;1;S8
+I;S;60;15;S9
+J;S;95;1;S10
+;;;;
+;;;;
+;;;;
+Anzahl der Stationen:;;10;;
+m:n Multiloop Topology;;mind. 2 Sinken und Quellen;;
+Koordinaten schon gegeben.;;;;
+Alles geht von A raus. --> Wir können einfach annehmen, dass A die einzige Quelle ist und die anderen sind nur Senken. (Nach der Besprechung am 29.11.2022);;;;
+gleiche Stationsliste wie YU_Layout 1 unidir;;;;
+;;;;
+Stand : 1.12.2022;;;;

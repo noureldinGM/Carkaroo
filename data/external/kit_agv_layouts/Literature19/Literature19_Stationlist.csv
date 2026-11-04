@@ -1,0 +1,21 @@
+Station-ID;Type;x-Coordinate;y-Coordinate;Origin Station-ID
+A;Q,S;7;1;S1
+B;S;22;1;S2
+C;S;30;1;S3
+D;S;1;5;S4
+E;S;7;9;S5
+F;S;25;9;S6
+G;S;45;9;S7
+H;S;37;15;S8
+I;Q,S;55;15;S9
+J;S;7;22;S10
+K;S;22;22;S11
+L;S;30;22;S12
+M;S;45;22;S13
+N;S;1;30;S14
+O;S;16;30;S15
+P;S;37;30;S16
+Q;S;55;30;S17
+R;Q;7;37;S18
+S;S;25;37;S19
+T;S;45;37;S20
