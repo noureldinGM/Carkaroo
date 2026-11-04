@@ -31,8 +31,10 @@ from agv_brain import protocol as P
 from agv_brain.simulator import Context
 
 STATIC = Path(__file__).resolve().parent / "static"
+DESIGN = Path(__file__).resolve().parents[2] / "design"   # the Carkaroo design system (tokens, logos, style guide)
 TYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
-         ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml"}
+         ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml",
+         ".json": "application/json", ".png": "image/png", ".md": "text/plain; charset=utf-8"}
 
 
 def layout_json(ctx: Context) -> dict:
@@ -108,9 +110,14 @@ class DashboardServer:
                         return self._json(200, tracks.load_raw(path.removeprefix("/api/track/")))
                     except (ValueError, FileNotFoundError) as exc:
                         return self._json(404, {"error": str(exc)})
-                name = "index.html" if path in ("/", "/index.html") else path.removeprefix("/static/")
-                file = (STATIC / name).resolve()
-                if STATIC not in file.parents or not file.is_file():
+                root, name = STATIC, "index.html" if path in ("/", "/index.html") else path.removeprefix("/static/")
+                if path == "/design":  # the style guide uses relative links, so it needs the slash
+                    self.send_response(301); self.send_header("Location", "/design/"); self.end_headers()
+                    return
+                if path.startswith("/design/"):
+                    root, name = DESIGN, path.removeprefix("/design").strip("/") or "index.html"
+                file = (root / name).resolve()
+                if root not in file.parents or not file.is_file():
                     return self._send(404, b'{"error": "not found"}')
                 self._send(200, file.read_bytes(), TYPES.get(file.suffix, "application/octet-stream"))
 

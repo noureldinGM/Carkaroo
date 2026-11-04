@@ -1,0 +1,135 @@
+/* Carkaroo components ("Night Race"): the building blocks every page shares.
+   Needs tokens.css first. Page layouts live in each app's own stylesheet. */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: var(--text-body); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+
+/* ---------- checkered flag: the race motif ---------- */
+.checker { background: conic-gradient(var(--tire) 25%, #fff 0 50%, var(--tire) 0 75%, #fff 0) 0 0 / calc(var(--checker) * 2) calc(var(--checker) * 2); }
+/* the finish strip: two rows of checkers over a yellow line. Top of every page, slide and poster */
+.finish { height: calc(var(--checker) * 2 + 4px); background:
+  linear-gradient(var(--signal), var(--signal)) bottom / 100% 4px no-repeat,
+  conic-gradient(#121314 25%, #fff 0 50%, #121314 0 75%, #fff 0) 0 0 / calc(var(--checker) * 2) calc(var(--checker) * 2); }
+
+/* ---------- logo ---------- */
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.brand-mark { width: 46px; height: 31px; flex: none; }
+.bm-body { fill: var(--roo); }
+.bm-stripe { fill: var(--signal); }
+.bm-sonar { fill: var(--chrome); }
+.bm-eye { fill: #f4f5f5; }
+.bm-pupil { fill: #121314; }
+.bm-wire { fill: none; stroke: var(--signal); stroke-width: 2; stroke-linecap: round; }
+.bm-tire { fill: #121314; }
+.bm-hub { fill: var(--signal); }
+:root[data-theme="dark"] .bm-body { fill: #4a4e53; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bm-body { fill: #4a4e53; } }
+.brand-name { display: inline-flex; align-items: center; font: italic 700 27px/1 var(--display); letter-spacing: .01em; }
+/* "roo" rides on a slanted asphalt plate with yellow letters */
+.brand-name .roo { display: inline-block; margin-left: 2px; padding: 1px 7px 2px 5px; background: #121314; color: var(--signal);
+  transform: skewX(var(--skew)); border-radius: 3px; }
+:root[data-theme="dark"] .brand-name .roo { box-shadow: 0 0 0 1.5px var(--chrome); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand-name .roo { box-shadow: 0 0 0 1.5px var(--chrome); } }
+.brand:hover .brand-mark { animation: hop .45s var(--ease); }
+@keyframes hop { 40% { transform: translateY(-4px) rotate(-4deg); } 70% { transform: translateY(0) rotate(1deg); } }
+
+/* ---------- text ---------- */
+.page-title { font: var(--text-h1); margin: 0 0 6px; }
+.page-sub { color: var(--ink-2); margin: 0 0 22px; max-width: 60ch; }
+.quiet { color: var(--muted); }
+code { font: var(--text-code); background: var(--primary-soft); border-radius: var(--radius-xs); padding: 1px 6px; overflow-wrap: anywhere; }
+.snippet { font: 12px/1.5 var(--mono); background: #121314; color: #eef0f0; border-radius: var(--radius-sm);
+  padding: 10px 12px; overflow-x: auto; margin: 0; white-space: pre; }
+
+/* slanted banner heading (from the poster): asphalt plate, checker cap, uppercase italic */
+.banner, .section-title { display: inline-flex; align-items: center; gap: 10px; margin: 34px 0 14px; padding: 7px 18px 7px 10px;
+  background: var(--primary); color: var(--primary-ink); transform: skewX(var(--skew)); border-radius: 4px;
+  font: var(--text-banner); text-transform: uppercase; letter-spacing: .06em; }
+.banner::before, .section-title::before { content: ""; width: 22px; height: 14px; flex: none; border-radius: 2px;
+  background: conic-gradient(#121314 25%, #fff 0 50%, #121314 0 75%, #fff 0) 0 0 / 7px 7px; box-shadow: 0 0 0 1.5px var(--chrome); }
+.banner > *, .section-title > * { transform: skewX(calc(var(--skew) * -1)); }
+
+/* eyebrow: a small slanted yellow tag above the main sentence */
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; background: var(--signal); color: var(--signal-ink);
+  font: italic 700 15px/1.2 var(--display); text-transform: uppercase; letter-spacing: .06em;
+  transform: skewX(var(--skew)); border-radius: 3px; }
+
+/* ---------- buttons and inputs ---------- */
+select, input, button { font: inherit; font-size: 14px; border-radius: var(--radius-sm); }
+select, input { border: 1.5px solid var(--line-2); background: var(--card); color: var(--ink); padding: 7px 9px; }
+input[type="number"] { width: 76px; }
+button, .button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: var(--primary); color: var(--primary-ink);
+  padding: 8px 16px; font: italic 700 16px/1.2 var(--display); letter-spacing: .03em; cursor: pointer; text-decoration: none;
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-press); transition: filter var(--fast); }
+button:hover, .button:hover { filter: brightness(1.25); }
+button:active, .button:active { box-shadow: none; transform: translateY(1px); }
+button.ghost, .button.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line-2); }
+button.ghost:hover, .button.ghost:hover { box-shadow: inset 0 0 0 2px var(--ink); filter: none; }
+button.go, .button.go { background: var(--signal); color: var(--signal-ink); }
+button.small, .button.small { padding: 4px 11px; font-size: 14px; }
+button:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+
+/* ---------- material chip: the letter always travels with the color ---------- */
+.mat { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; font: italic 700 17px/1 var(--display);
+  color: #fff; background: var(--material-x); flex: none; box-shadow: inset 0 -2px 0 rgb(0 0 0 / .25); }
+.mat.A { background: var(--material-a); } .mat.B { background: var(--material-b); } .mat.C { background: var(--material-c); }
+.mat.big { width: 44px; height: 44px; border-radius: 10px; font-size: 28px; box-shadow: inset 0 -3px 0 rgb(0 0 0 / .25); }
+
+/* ---------- badges, tags, pills ---------- */
+.badge { display: inline-flex; align-items: center; gap: 6px; font: 600 14px/1 var(--sans); padding: 7px 12px; border-radius: var(--radius-pill); }
+.badge.good { color: var(--good); background: var(--good-bg); }
+.badge.warn { color: var(--warn); background: var(--warn-bg); }
+.badge.crit { color: var(--crit); background: var(--crit-bg); }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: var(--radius-pill); }
+.tag.way, .tag.sim { color: var(--signal-ink); background: var(--signal); }
+.tag.out { color: var(--crit); background: var(--crit-bg); }
+.tag.real { color: var(--primary-ink); background: var(--primary); }
+.mode-pill { font: italic 700 14px var(--display); text-transform: uppercase; letter-spacing: .06em; padding: 4px 12px;
+  border-radius: 3px; transform: skewX(var(--skew)); text-decoration: none; white-space: nowrap; }
+.mode-pill.sim { background: var(--signal); color: var(--signal-ink); }
+.mode-pill.real { background: var(--primary); color: var(--primary-ink); }
+.link { font-size: 13px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 7px; }
+.link::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.link.on::before { background: var(--stock-ok); box-shadow: 0 0 0 3px var(--good-bg); }
+.link.off::before { background: var(--crit); }
+
+/* ---------- panels (the poster's rounded boxes with the thick outline) ---------- */
+.card, .ctl { background: var(--card); border: var(--stroke) solid var(--outline); border-radius: var(--radius-lg); padding: 16px 18px; }
+.ctl h3, .card h3 { font: var(--text-h3); margin: 0 0 4px; }
+.ctl p { margin: 0 0 12px; font-size: 13px; color: var(--ink-2); }
+/* KPI tile: one big italic number on a yellow kerb */
+.kpi { background: var(--card); padding: 12px 16px 10px; border-radius: var(--radius-md); border: var(--stroke) solid var(--outline); box-shadow: var(--kerb); }
+.kpi b { display: block; font: var(--text-num); }
+.kpi span { font-size: 13px; color: var(--ink-2); }
+.kpi.bad { box-shadow: 0 5px 0 var(--crit); }
+.kpi.bad b { color: var(--crit); }
+/* call-out (from the portfolio's "Relevance to our project" box) */
+.callout { background: var(--primary-soft); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; }
+.callout > b:first-child { display: block; font: var(--text-h3); font-size: 16px; margin-bottom: 2px; }
+.alert { background: var(--warn-bg); color: var(--warn); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; }
+.alert.crit { background: var(--crit-bg); color: var(--crit); }
+
+/* stock bar: fill = what is left, black tick = the safety level */
+.sbar { position: relative; height: 12px; border-radius: 3px; background: var(--line); }
+.sbar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--ink); transition: width .4s; }
+.sbar .fill.low { background: var(--stock-low); }
+.sbar .fill.out { background: var(--crit); }
+.sbar .safety { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--signal); border-radius: 1px; box-shadow: 0 0 0 1px var(--ink); }
+
+/* the track: a lit white board with dots and black tape */
+.floor-card { background: var(--mat-bg); border: var(--stroke) solid var(--outline); border-radius: var(--radius-lg); padding: 14px 14px 10px;
+  color: var(--mat-text); background-image: radial-gradient(var(--mat-dots) 1px, transparent 1.2px); background-size: 18px 18px; }
+
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #121314; color: #eef0f0;
+  padding: 10px 16px; border-radius: var(--radius-sm); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s;
+  max-width: calc(100% - 32px); box-shadow: var(--kerb); }
+.toast.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .brand:hover .brand-mark { animation: none; }
+  .sbar .fill { transition: none; }
+}

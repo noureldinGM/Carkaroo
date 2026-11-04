@@ -3,28 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Capstone AVG · Live factory</title>
+  <title>Carkaroo · Live factory</title>
+  <link rel="icon" href="/design/logo/carkaroo-mark.svg" type="image/svg+xml">
   <!-- fonts load when there is internet; the page falls back to system fonts offline -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/design/tokens.css">
+  <link rel="stylesheet" href="/design/components.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header class="top">
     <div class="top-row">
-      <a class="brand" href="#now" aria-label="Capstone AVG, live factory">
-        <!-- the robot car: green chassis, yellow wheels, ultrasonic "eyes" -->
+      <a class="brand" href="#now" aria-label="Carkaroo, live factory">
+        <!-- Roo, the Carkaroo car: graphite body, yellow racing stripe and hubs, ultrasonic "eyes" -->
         <svg class="brand-mark" viewBox="0 0 44 30" aria-hidden="true">
+          <symbol id="roo" viewBox="0 0 44 30">
           <rect x="3" y="6" width="34" height="14" rx="4" class="bm-body"/>
+          <rect x="3" y="12" width="27" height="3" class="bm-stripe"/>
           <rect x="30" y="2" width="12" height="9" rx="2" class="bm-sonar"/>
           <circle cx="33.5" cy="6.5" r="2.6" class="bm-eye"/><circle cx="38.5" cy="6.5" r="2.6" class="bm-eye"/>
           <circle cx="33.9" cy="6.5" r="1.1" class="bm-pupil"/><circle cx="38.9" cy="6.5" r="1.1" class="bm-pupil"/>
           <path d="M8 6 C 8 0, 16 0, 17 6" class="bm-wire"/>
           <circle cx="11" cy="22" r="6" class="bm-tire"/><circle cx="11" cy="22" r="3" class="bm-hub"/>
           <circle cx="29" cy="22" r="6" class="bm-tire"/><circle cx="29" cy="22" r="3" class="bm-hub"/>
+        </symbol>
+          <use href="#roo"/>
         </svg>
-        <span class="brand-name">Capstone AVG</span>
+        <span class="brand-name">Carka<span class="roo">roo</span></span>
       </a>
       <nav class="tabs" aria-label="Pages">
         <a href="#now" data-tab="now">Now</a>
@@ -40,7 +47,7 @@
         <span id="link" class="link off">Connecting…</span>
       </div>
     </div>
-    <div class="ribbon" aria-hidden="true"></div>
+    <div class="finish" aria-hidden="true"></div>
   </header>
 
   <main>
@@ -48,7 +55,7 @@
     <section class="page" data-page="now" aria-label="Now">
       <div class="now-grid">
         <div class="now-left">
-          <div id="hero" class="hero"><p class="quiet">Waiting for the AI…</p></div>
+          <div id="hero" class="hero"><p class="waiting"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>Roo is waiting for the AI…</p></div>
           <div id="next" class="next"></div>
           <div id="kpis" class="kpis"></div>
         </div>
@@ -67,7 +74,7 @@
       <h1 class="page-title">Stock</h1>
       <p class="page-sub">What every station has left, measured by its load cells. The line shows the safety level.</p>
       <div id="stations" class="station-grid"></div>
-      <h2 class="section-title">Warehouse</h2>
+      <h2 class="section-title"><span>Warehouse</span></h2>
       <div id="warehouse" class="warehouse"></div>
     </section>
 
@@ -126,6 +133,12 @@
       </section>
     </section>
   </main>
+
+  <footer class="foot">
+    <svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>
+    <span>Carkaroo · the AI delivery car that carries what the line needs, before it runs out.</span>
+    <a href="/design/" style="margin-left:auto">Design system</a>
+  </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

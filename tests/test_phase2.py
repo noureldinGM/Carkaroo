@@ -1,6 +1,7 @@
 import json
 import socket
 import time
+import urllib.error
 import urllib.request
 
 import pytest
@@ -128,7 +129,12 @@ def test_dashboard_serves_state_and_requests():
     snap = json.loads(urllib.request.urlopen(f"{base}/api/snapshot").read())
     assert snap["state"]["hello"] == "world"
     assert {n["id"] for n in snap["layout"]["nodes"]} >= {"HOME", "S1", "W-A", "J1"}
-    assert b"Capstone AVG" in urllib.request.urlopen(base).read()
+    assert b"Carkaroo" in urllib.request.urlopen(base).read()
+    # the design system is served next to the website, and nothing outside design/ leaks through
+    assert b"--signal" in urllib.request.urlopen(f"{base}/design/tokens.css").read()
+    assert b"Design system" in urllib.request.urlopen(f"{base}/design").read()
+    with pytest.raises(urllib.error.HTTPError):
+        urllib.request.urlopen(f"{base}/design/../README.md")
     req = urllib.request.Request(f"{base}/api/request", data=json.dumps({"material": "B", "station": "S3"}).encode(),
                                  method="POST", headers={"Content-Type": "application/json"})
     urllib.request.urlopen(req).read()
