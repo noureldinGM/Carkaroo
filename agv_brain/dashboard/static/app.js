@@ -1,4 +1,4 @@
-// Capstone AVG live dashboard: polls /api/snapshot and draws what the AI sees and decides.
+// Carkaroo live dashboard: polls /api/snapshot and draws what the AI sees and decides.
 // Pages: Now, Stations, AI, History, Try it, and Setup (simulation or real factory).
 // Only the open page is redrawn.
 "use strict";
@@ -297,33 +297,33 @@ const CAR_DOING = {
 
 function carSentence(state) {
   const car = state.car, t = car.task;
-  if (!car.online) return "The car is offline.";
+  if (!car.online) return "Roo (the car) is offline.";
   if (t && t.kind === "delivery") {
     const where = t.leg === 0 ? `to rack ${t.legs[0].path.at(-1)} to pick up ${t.material}` : `${t.material} to ${t.station}`;
-    return t.blocked ? `The car is stopped by an obstacle while taking ${where}.` : `The car is ${t.leg === 0 ? "driving" : "carrying"} ${where}.`;
+    return t.blocked ? `Roo is stopped by an obstacle while taking ${where}.` : `Roo is ${t.leg === 0 ? "driving" : "carrying"} ${where}.`;
   }
-  if (t && t.kind === "charge") return "The car is going to the dock to charge.";
-  return `The car ${CAR_DOING[car.mode] || car.mode.toLowerCase()} at ${car.node}.`;
+  if (t && t.kind === "charge") return "Roo is going to the dock to charge.";
+  return `Roo ${CAR_DOING[car.mode] || car.mode.toLowerCase()} at ${car.node}.`;
 }
 
 function renderHero(dec, state) {
   const hero = $("#hero");
   const q = ordered(dec);
-  const label = dec && dec.preview && state.car.task ? "Next, when the car is free" : "The AI's choice";
+  const label = dec && dec.preview && state.car.task ? "Next, when Roo is free" : "The AI's choice";
   if (!q.length) {
     const waiting = state.requests.length;
     // requests are open but the safety rules let none through (empty warehouse, blocked line, ...)
     const reasons = [...new Set((dec && dec.alerts) || [])];
     hero.innerHTML = waiting ? `
-      <div class="label">${label}</div>
+      <div class="label eyebrow">${label}</div>
       <h1>Can't serve the waiting request${waiting > 1 ? "s" : ""}</h1>
       <p class="why">${plural(waiting, "request")} waiting, but the safety rules stop the car:</p>
       <ul class="blocked">${reasons.map((a) => `<li>${esc(a)}</li>`).join("") || "<li>Checking again…</li>"}</ul>
       ${reasons.some((a) => a.startsWith("Warehouse")) ? `<p class="why">Restocked it? Press <b>Refilled</b> on the <a href="#stations">Stations page</a>.</p>` : ""}
       <p class="car">${esc(carSentence(state))}</p>` : `
-      <div class="label">The AI's choice</div>
+      <div class="label eyebrow">The AI's choice</div>
       <h1>All stocked up</h1>
-      <p class="why">Every station has enough for now, so the robot takes a break. The AI asks for a delivery
+      <p class="why">Every station has enough for now, so Roo takes a break. The AI asks for a delivery
         by itself as soon as a station would run low before the car could get there.</p>
       <p class="car">${esc(carSentence(state))}</p>`;
     return;
@@ -335,7 +335,7 @@ function renderHero(dec, state) {
     : dec.optimizer_agrees ? `<span class="badge good">✓ Best possible choice</span>`
     : `<span class="badge warn">≈ Almost best: ${pct.toFixed(1)}% more cost${best ? `; the optimizer would start with ${esc(best.material)} → ${esc(best.station)}` : ""}</span>`;
   hero.innerHTML = `
-    <div class="label">${label}</div>
+    <div class="label eyebrow">${label}</div>
     <h1><span>Bring</span>${chip(first.material, "big")}<span>to ${esc(first.station_name)}</span></h1>
     <p class="why">${esc(first.station)} has <b>${Math.round(first.stock)} ${esc(first.material)} left</b> and runs out in
       <b>${fmtS(first.stockout_s)}</b>. The trip takes ${fmtS(first.trip_s)}.${first.slack_s < 0 ? " It stops for a short time even if served now, so it cannot wait." : ""}</p>
@@ -467,7 +467,7 @@ function setLink(ok, state) {
   const el = $("#link");
   const carOk = state && state.car.online;
   el.className = `link ${ok && carOk ? "on" : "off"}`;
-  el.textContent = !ok ? "AI offline" : carOk ? "Car online" : "Car offline";
+  el.textContent = !ok ? "AI offline" : carOk ? "Roo online" : "Roo offline";
 }
 
 // ---------- Try it ----------
