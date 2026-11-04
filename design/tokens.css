@@ -1,0 +1,103 @@
+/* Carkaroo design tokens — the one source for colors, type, spacing, radius and shadows.
+   Used by the website (served at /design/tokens.css), the style guide (design/index.html),
+   and mirrored in design/tokens.json (slides, charts) and design/carkaroo.js (3D simulation).
+   Change a value here, then in tokens.json and carkaroo.js. */
+
+:root {
+  /* ---- surfaces and text ---- */
+  --paper: #f5f3ec;        /* page background: the workbench */
+  --card: #ffffff;         /* cards, tables, inputs on paper */
+  --ink: #1c1d1a;          /* main text */
+  --ink-2: #545750;        /* secondary text */
+  --muted: #6b6e66;        /* hints, timestamps (4.6:1 on paper) */
+  --line: #e4e2d8;         /* dividers, empty bars */
+  --line-2: #cfccbf;       /* input and ghost-button borders */
+
+  /* ---- the robot kit: brand colors ---- */
+  --chassis: #1a7f45;      /* Roo's green chassis: primary buttons, active tab, good things */
+  --chassis-ink: #ffffff;  /* text on chassis */
+  --chassis-soft: #e1f2e6; /* selected rows, soft highlights */
+  --chassis-bright: #1f8a4c; /* the chassis in drawings (never behind small text) */
+  --motor: #f6c21c;        /* TT motor yellow: the route, "now" labels, focus ring */
+  --motor-ink: #2a2305;    /* text on motor */
+  --tire: #23231f;         /* tires, track tape */
+  --sonar: #2f6fd0;        /* the ultrasonic sensor: drawings only */
+  --wire-red: #e2483d;     /* jumper wires: ribbon and drawings only */
+  --wire-orange: #f08a24;
+
+  /* ---- status ---- */
+  --good: #1f7a45;  --good-bg: #e1f2e6;
+  --warn: #946006;  --warn-bg: #fbefcf;
+  --crit: #b7372a;  --crit-bg: #f8e0db;
+  --stop: #d9483b;         /* blocked line / obstacle on the map */
+  --charge: #7fd39f;       /* charging route and car */
+  --offline: #9a9c94;      /* offline car */
+  --stock-low: #f0a417;    /* low-stock dot and bar */
+
+  /* ---- materials: one color each, always with its letter ---- */
+  --material-a: #3566a8;   /* A, steel blue */
+  --material-b: #1d7a6c;   /* B, plastic teal */
+  --material-c: #b35a1f;   /* C, copper */
+  --material-x: #6b665c;   /* any other material */
+
+  /* ---- the track mat: a white board with black tape ---- */
+  --mat-bg: #fbfaf6;  --mat-edge: #e2dfd3;  --mat-tape: #22221f;
+  --mat-text: #1c1d1a;  --mat-sub: #6f7268;  --mat-dots: rgb(0 0 0 / .07);
+
+  /* ---- type ---- */
+  --round: "Fredoka", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;   /* headings, buttons, numbers */
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;              /* body text */
+  --mono: "IBM Plex Mono", Consolas, "Courier New", monospace;             /* times, IDs, code */
+  --text-display: 600 42px/1.12 var(--round);
+  --text-h1: 600 32px/1.15 var(--round);
+  --text-h2: 600 21px/1.2 var(--round);
+  --text-h3: 600 18px/1.2 var(--round);
+  --text-body: 400 15px/1.55 var(--sans);
+  --text-small: 400 13px/1.45 var(--sans);
+  --text-num: 600 28px/1.1 var(--round);
+  --text-code: 400 13px/1.5 var(--mono);
+
+  /* ---- spacing: 4 px steps ---- */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px;  --space-8: 36px;
+
+  /* ---- radius ---- */
+  --radius-xs: 6px;    /* code, small chips */
+  --radius-sm: 10px;   /* buttons, inputs */
+  --radius-md: 14px;   /* KPI tiles, small cards */
+  --radius-lg: 18px;   /* cards, the track mat */
+  --radius-pill: 999px;
+
+  /* ---- shadows: toy blocks, not floating glass ---- */
+  --shadow-press: inset 0 -3px 0 rgb(0 0 0 / .2);   /* the bottom edge of a pressable block */
+  --shadow-card: 0 1px 0 rgb(0 0 0 / .04), 0 2px 0 var(--line);
+  --ring: 0 0 0 3px var(--motor);
+
+  /* ---- motion ---- */
+  --ease: cubic-bezier(.3, .7, .4, 1);
+  --fast: .15s;  --move: .3s;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #141613; --card: #1d201c; --ink: #ecefe6; --ink-2: #b4b8ad; --muted: #a0a499;
+    --line: #2d312b; --line-2: #42473f;
+    --chassis: #35a865; --chassis-ink: #0d1a11; --chassis-soft: #1b3324;
+    --good: #5dc287; --good-bg: #1b3324; --warn: #e7b04c; --warn-bg: #3a2d10; --crit: #ec7b6d; --crit-bg: #3e1e19;
+    /* the mat stays a light board, a bit dimmer so it does not glare */
+    --mat-bg: #e6e3d8; --mat-edge: #2d312b;
+    --shadow-card: 0 1px 0 rgb(0 0 0 / .3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #141613; --card: #1d201c; --ink: #ecefe6; --ink-2: #b4b8ad; --muted: #a0a499;
+  --line: #2d312b; --line-2: #42473f;
+  --chassis: #35a865; --chassis-ink: #0d1a11; --chassis-soft: #1b3324;
+  --good: #5dc287; --good-bg: #1b3324; --warn: #e7b04c; --warn-bg: #3a2d10; --crit: #ec7b6d; --crit-bg: #3e1e19;
+  --mat-bg: #e6e3d8; --mat-edge: #2d312b;
+  --shadow-card: 0 1px 0 rgb(0 0 0 / .3);
+  color-scheme: dark;
+}
