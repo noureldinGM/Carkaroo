@@ -67,7 +67,7 @@ flowchart LR
     F --> E["Evaluate on new situations and<br/>200 never-seen factories<br/>vs optimizer and rules"]
 ```
 
-The model only sees times and numbers, never node or material names. Its training also includes 400 random factory layouts. So a new or changed track only needs an updated `config/factory_layout.yaml`, not retraining: it scores 91.2 % on factories it has never seen.
+The model only sees times and numbers, never node or material names. Its training also includes 400 random factory layouts. So a new or changed track only needs an updated `config/factory_layout.yaml`, not retraining: it scores 91.1 % on factories it has never seen, and 85.6 % in 14 real factories.
 
 Why learn from an optimizer instead of using it directly?
 - The optimizer has to try every order: 7 requests is 5,040 orders, and 10 requests is 3.6 million. The ranker compares pairs, so it stays fast however many requests are waiting.

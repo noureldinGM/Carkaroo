@@ -144,3 +144,44 @@ def random_layout(rng: np.random.Generator, base: Settings) -> Context:
 def layout_pool(n: int, seed: int, base: Settings) -> list[Context]:
     rng = np.random.default_rng(seed)
     return [random_layout(rng, base) for _ in range(n)]
+
+
+# ---------------------------------------------------------------------------
+# Large factories (real-factory scale)
+# ---------------------------------------------------------------------------
+# Testing on the real KIT layouts (real_layouts.py) showed that real factories
+# are much bigger than our table-top track: 2-340 m between stations, an AGV at
+# about 1 m/s, and a few busy routes next to many quiet ones. These random plants
+# copy those general patterns, never the KIT factories themselves, which stay
+# a test the model has not seen.
+
+def random_plant(rng: np.random.Generator, base: Settings, name: str = "plant") -> Context:
+    from agv_brain.real_layouts import RealLayout, real_context
+
+    n = int(rng.integers(4, 26))
+    width, height = rng.uniform(30, 250), rng.uniform(20, 120)  # meters
+    xy = rng.uniform(0, 1, size=(n, 2)) * (width, height)
+    ids = [f"P{k + 1}" for k in range(n)]
+    distance = {}
+    for a in range(n):
+        for b in range(n):
+            if a != b:
+                manhattan = abs(xy[a] - xy[b]).sum()
+                # aisles are not straight lines; some are one-way, so a->b != b->a
+                distance[ids[a], ids[b]] = round(max(2.0, manhattan * rng.uniform(1.0, 1.4)), 1)
+    sinks = rng.choice(n, size=int(rng.integers(1, max(2, n // 2) + 1)), replace=False)
+    routes = []
+    for s in sinks:
+        others = [k for k in range(n) if k != s]
+        for src in rng.choice(others, size=int(rng.integers(1, min(3, len(others)) + 1)), replace=False):
+            routes.append((ids[int(src)], ids[int(s)], float(rng.lognormal(0.0, 1.5))))
+    if len(routes) < 2:  # always something to choose between
+        src = next(k for k in range(n) if ids[k] not in (routes[0][0], routes[0][1]))
+        routes.append((ids[src], routes[0][1], float(rng.lognormal(0.0, 1.5))))
+    layout = RealLayout(name, tuple(ids), distance, tuple(routes))
+    return real_context(layout, base, speed_cm_s=float(rng.uniform(50, 200)))
+
+
+def plant_pool(n: int, seed: int, base: Settings) -> list[Context]:
+    rng = np.random.default_rng(seed)
+    return [random_plant(rng, base, f"plant-{k}") for k in range(n)]

@@ -70,6 +70,35 @@ Random situations don't look like the queues the AI meets when the factory actua
 | `data/sample/live_requests_sample.csv` | yes | the first 300 live situations, one row per request (same columns as above, plus `round`) |
 | `data/generated/live_requests.csv`, `live_pairs.npz` | no | all live situations and their training pairs |
 
+## Large factories (real-factory scale)
+Testing on real factories (next section) showed they are much bigger than our track. `random_plant` in `agv_brain/layouts.py` makes random large factories that copy the general sizes of the real ones, never the real factories themselves:
+- 4–25 stations spread over 30–250 m × 20–120 m;
+- driving distances 1.0–1.4 × the straight-line (Manhattan) distance, at least 2 m, and slightly different in each direction;
+- each station supplied by 1–3 sources, with a few busy routes and many quiet ones (trips per hour from a log-normal distribution);
+- an AGV speed of 0.5–2 m/s.
+
+The situations on these factories are made and labelled exactly like the others. Regenerate them with:
+```bash
+python scripts/generate_dataset.py --plants 12000
+```
+That gives 12,000 situations, 41,938 requests and 127,730 pairs (`data/generated/plant_pairs.npz`, not in git). Model version 4 is trained on everything:
+```bash
+python scripts/train_ranker.py --extra data/generated/live_pairs.npz data/generated/plant_pairs.npz --holdout 0
+```
+
+## Real factory layouts (test only)
+To check the model outside simulation, `scripts/evaluate_real_layouts.py` tests it on real factories. It uses the **KIT AGV material flow and layout data set** (Sperling et al., *IEEE Access* 11, 2023, CC BY 4.0), stored in `data/external/kit_agv_layouts/` with its own README.
+
+- Of its 30 layouts from German industry, the 14 with more than one transport route are used. The other 16 are shuttles between two points, so there is never a choice to make.
+- **Real:**
+  - the stations;
+  - the driving distances between them (2–340 m);
+  - which source supplies which station;
+  - how many trips per hour each route has. Busy routes get requests more often.
+- **Simulated, as in training:** the stock, usage rate, criticality and waiting time of each request, and where the car is. The data set is a plan, so it has no moment-by-moment state.
+- **Assumed:** an AGV speed of 1 m/s. The script also checks other speeds.
+- The data is **never used for training**. Labels come from the exact optimizer, as everywhere else. Results: `reports/real_layouts.md`.
+
 ## Train / test split
 - Training holds out 20 % of the situations, whole situations at a time, for validation (`scripts/train_ranker.py`).
 - The final test (`scripts/evaluate.py`) uses different random seeds from training, with up to **7** requests per situation (training used at most 6). It has two parts:

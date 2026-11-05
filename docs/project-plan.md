@@ -24,8 +24,9 @@ Capstone requirements this plan covers (G12 2026/2027, "IT and AI Applications")
 - [x] Automatic need detection: no operator needed
 - [x] Safety rules (warehouse stock, room for a box, reachability, battery)
 - [x] Teacher optimizer and simple-rule baselines
-- [x] ML ranker trained on 30,000 random situations + 18,000 live ones: 90.6 % top-1 accuracy on unseen data, 84.2 % in live operation
-- [x] Training on 400 random factory layouts: 91.2 % on factories it has never seen, so a new track needs no retraining
+- [x] ML ranker trained on 30,000 random situations + 18,000 live ones + 12,000 in large factories: 91.6 % top-1 accuracy on unseen data, 83.8 % in live operation
+- [x] Training on 400 random factory layouts: 91.1 % on factories it has never seen, so a new track needs no retraining
+- [x] Tested on 14 real factory layouts (KIT data set, test only): 85.6 %
 - [x] Explanations ("why" + "what if")
 - [x] Demo, sensitivity sweep, evaluation report, tests
 

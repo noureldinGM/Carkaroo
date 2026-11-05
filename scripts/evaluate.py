@@ -74,14 +74,15 @@ FEATURE_LABELS = {
 ORDER = ["ml", "weighted_rules", "earliest_stockout", "nearest", "fifo", "optimal"]
 
 
-def run(sample_ctx, ranker, scenarios, seed, n_range):
-    """Score every policy on `scenarios` random situations. sample_ctx(rng) -> Context."""
+def run(sample_ctx, ranker, scenarios, seed, n_range, scenario=random_scenario):
+    """Score every policy on `scenarios` random situations. sample_ctx(rng) -> Context,
+    scenario(rng, ctx, n_range) -> (car, jobs)."""
     policies = {"ml": ranker, **BASELINES}
     rng = np.random.default_rng(seed)
     rows, pair_X, pair_y = [], [], []
     for sid in range(scenarios):
         vctx = sample_ctx(rng)
-        car, jobs = random_scenario(rng, vctx, n_range)
+        car, jobs = scenario(rng, vctx, n_range)
         costs = first_choice_costs(vctx, jobs, car)
         best_first = min(costs)
         opt_jobs, opt_cost = best_order(vctx, jobs, car)
