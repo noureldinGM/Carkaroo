@@ -10,10 +10,16 @@ data/generated/
 # Device keys and the website's saved mode (secret / this laptop only)
 config/*.local.yaml
 
+# Other secrets
+.env
+*.pem
+*.key
+
 # Run logs (readings, decisions, events of each run)
 logs/
 
-# Editors / OS
+# Editors / OS / Claude Code worktrees
+.claude/
 .vscode/
 .idea/
 Thumbs.db

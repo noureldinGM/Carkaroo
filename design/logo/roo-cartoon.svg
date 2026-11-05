@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -4 66 36" width="1320" height="720">
+  <title>Roo, cartoon style: thick outlines and speed lines (posters, portfolio, slides)</title>
+  <g stroke="#121314" stroke-linecap="round" stroke-linejoin="round">
+    <!-- speed lines -->
+    <path d="M-12 9 H-3 M-10 14 H-1 M-12 19 H-4" fill="none" stroke-width="1.6"/>
+    <!-- antenna wire -->
+    <path d="M8 6 C 8 -0.5, 16 -0.5, 17 6" fill="none" stroke="#f6c21c" stroke-width="2.4"/>
+    <!-- body -->
+    <rect x="2" y="6" width="36" height="15" rx="5" fill="#2a2d31" stroke-width="1.6"/>
+    <rect x="2.8" y="12" width="28" height="3.4" fill="#f6c21c" stroke="none"/>
+    <path d="M6 9 H22" fill="none" stroke="#5d6268" stroke-width="1.2"/>
+    <!-- sonar head -->
+    <rect x="30" y="1.5" width="13" height="10" rx="2.5" fill="#8b9096" stroke-width="1.6"/>
+    <circle cx="33.8" cy="6.5" r="2.9" fill="#ffffff" stroke-width="1.2"/>
+    <circle cx="39.2" cy="6.5" r="2.9" fill="#ffffff" stroke-width="1.2"/>
+    <circle cx="34.5" cy="6.8" r="1.25" fill="#121314" stroke="none"/>
+    <circle cx="39.9" cy="6.8" r="1.25" fill="#121314" stroke="none"/>
+    <!-- wheels -->
+    <circle cx="11" cy="22" r="6.4" fill="#121314" stroke-width="1.2"/>
+    <circle cx="11" cy="22" r="3" fill="#f6c21c" stroke-width="1.1"/>
+    <circle cx="29" cy="22" r="6.4" fill="#121314" stroke-width="1.2"/>
+    <circle cx="29" cy="22" r="3" fill="#f6c21c" stroke-width="1.1"/>
+  </g>
+</svg>

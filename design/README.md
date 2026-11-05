@@ -18,6 +18,8 @@ Open the living style guide at **http://localhost:8050/design/** while the app r
 | `tokens.json` | the same tokens as JSON (hex values for Canva and slides) | Canva, slides, charts |
 | `carkaroo.js` | the same tokens for JavaScript: Three.js materials, fog and night moods, scale, car timings | 3D simulation |
 | `logo/` | logo (light and dark), Roo side view, Roo from above, the finish strip | everything |
+| `roo.js`, `roo.css` | the live logo and Roo the character: moods from the live data, touch and idle animations | website, style guide |
+| `roo-moods.html` | every mood of Roo, the rules, try them live | you, teammates |
 | `index.html` | the style guide page | you, teammates |
 
 Change a value in `tokens.css` first, then copy it to `tokens.json` and `carkaroo.js`. Python charts use `scripts/plot_style.py`.
@@ -49,11 +51,31 @@ Taglines (one per piece):
 | `logo/roo-top.svg` | Roo from above, facing right: maps, diagrams, 3D reference |
 | `logo/finish-strip.svg` | the checkered strip with a yellow line, for the top edge of slides and posters |
 
-- The wordmark is **Carka** in ink, then **roo** in yellow on a slanted asphalt plate, all in Barlow Condensed Bold Italic.
+- The wordmark is **Carkar** in Barlow Condensed Bold Italic, then **Roo's two eyes as the "oo"**, with the yellow antenna over the eyes and a yellow line under the word (the poster's logo). On the website it is live (`roo.js`): the eyes blink, look at the pointer and show Roo's mood.
 - Roo: graphite body, yellow racing stripe, yellow hubs and antenna, chrome sensor block with two white eyes.
-- Clear space: one wheel all around. Smallest: mark 24 px on screen, 10 mm in print.
+- Clear space: one eye all around the logo, one wheel around Roo. Smallest: mark 24 px on screen, 10 mm in print.
 - Don't recolor Roo, stretch it, outline it or add shadows.
 - Logo files use Barlow Condensed as live text. Install it (free, Google Fonts) on any computer that edits slides, or export to PDF/PNG.
+
+### Roo, the main character
+
+Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, the logo's eyes and Roo on the Now page show it, and Roo says one short line:
+
+| Mood | When |
+| --- | --- |
+| Asleep | the car is offline |
+| Thinking | waiting for the AI |
+| Shocked | the track is blocked or the car reports an error |
+| Sad | a station ran out and its line stopped |
+| Proud | a delivery was just made (4 s, hop and confetti) |
+| Sleepy | battery under 20 % |
+| Charging | at the dock |
+| Worried | a station runs out less than a minute after Roo could get there |
+| Driving | on a task |
+| Happy | everything is stocked |
+| Curious | you just changed something on the Try it page |
+
+You can play with Roo: **tap** (boop), **tap 5 times** (dizzy), **hold** (revs the engine, then zooms off and back), **drag** (it rides along and rolls back), **rub it with the mouse** (it giggles). The logo **winks** when clicked. Left alone, Roo looks around, hums, stretches, yawns after 30 s and naps after a minute; it looks for you when the pointer leaves the page. A **Refilled** press gets hearts. In the serious moods (offline, blocked, a line stopped) Roo doesn't play: it answers plainly. Moods only move the eyes, the antenna and small effects; the car is never redrawn. "Reduce motion" turns the animations off.
 
 ## 3. Color
 

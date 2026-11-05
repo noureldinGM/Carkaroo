@@ -143,10 +143,29 @@ def test_dashboard_serves_state_and_requests():
     refills = []
     bus.subscribe(P.WAREHOUSE_REFILL, lambda t, p: refills.append(p))
     urllib.request.urlopen(urllib.request.Request(f"{base}/api/refill", data=b'{"material": "A"}',
-                                                  method="POST")).read()
+                                                  method="POST", headers={"Content-Type": "application/json"})).read()
     bus.flush()
     assert refills == [{"material": "A"}]
-    sim_req = urllib.request.Request(f"{base}/api/sim", data=b"{}", method="POST")
+    sim_req = urllib.request.Request(f"{base}/api/sim", data=b"{}", method="POST", headers={"Content-Type": "application/json"})
     with pytest.raises(urllib.error.HTTPError):  # simulation controls are off
         urllib.request.urlopen(sim_req)
+
+    # security: other websites cannot send commands, DNS rebinding is refused, headers are set
+    def post(headers, data=b'{"material": "A"}'):
+        try:
+            return urllib.request.urlopen(urllib.request.Request(f"{base}/api/refill", data=data, method="POST",
+                                                                 headers=headers)).status
+        except urllib.error.HTTPError as exc:
+            return exc.code
+    assert post({"Content-Type": "text/plain"}) == 415                       # a form or no-cors fetch
+    assert post({"Content-Type": "application/json", "Origin": "http://evil.example"}) == 403
+    assert post({"Content-Type": "application/json", "Host": "evil.example:8050"}) == 421
+    assert post({"Content-Type": "application/json"}, b"[1]") == 400
+    assert post({"Content-Type": "application/json", "Origin": base}) == 200  # the page itself
+    page = urllib.request.urlopen(base)
+    assert "frame-ancestors 'none'" in page.headers["Content-Security-Policy"]
+    assert "'sha256-" in page.headers["Content-Security-Policy"]             # the inline theme script
+    assert page.headers["X-Content-Type-Options"] == "nosniff"
+    with pytest.raises(urllib.error.HTTPError):                              # scripts are not served
+        urllib.request.urlopen(f"{base}/design/print/make_print_assets.py")
     dash.stop()

@@ -28,12 +28,7 @@ a { color: inherit; }
 .bm-hub { fill: var(--signal); }
 :root[data-theme="dark"] .bm-body { fill: #4a4e53; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bm-body { fill: #4a4e53; } }
-.brand-name { display: inline-flex; align-items: center; font: italic 700 27px/1 var(--display); letter-spacing: .01em; }
-/* "roo" rides on a slanted asphalt plate with yellow letters */
-.brand-name .roo { display: inline-block; margin-left: 2px; padding: 1px 7px 2px 5px; background: #121314; color: var(--signal);
-  transform: skewX(var(--skew)); border-radius: 3px; }
-:root[data-theme="dark"] .brand-name .roo { box-shadow: 0 0 0 1.5px var(--chrome); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand-name .roo { box-shadow: 0 0 0 1.5px var(--chrome); } }
+/* the logo itself ("Carkar" + Roo's eyes) is in roo.css */
 .brand:hover .brand-mark { animation: hop .45s var(--ease); }
 @keyframes hop { 40% { transform: translateY(-4px) rotate(-4deg); } 70% { transform: translateY(0) rotate(1deg); } }
 

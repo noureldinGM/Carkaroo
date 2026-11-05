@@ -5,34 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Carkaroo · Live factory</title>
   <link rel="icon" href="/design/logo/carkaroo-mark.svg" type="image/svg+xml">
+  <!-- light or dark, before the page draws: the saved choice, otherwise the computer's setting -->
+  <script>try { const t = localStorage.getItem("carkaroo-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
   <!-- fonts load when there is internet; the page falls back to system fonts offline -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="/design/tokens.css">
   <link rel="stylesheet" href="/design/components.css">
+  <link rel="stylesheet" href="/design/roo.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <!-- Roo, the Carkaroo car, for small pictures (waiting text, footer) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="roo" viewBox="0 0 44 30">
+      <rect x="3" y="6" width="34" height="14" rx="4" class="bm-body"/>
+      <rect x="3" y="12" width="27" height="3" class="bm-stripe"/>
+      <rect x="30" y="2" width="12" height="9" rx="2" class="bm-sonar"/>
+      <circle cx="33.5" cy="6.5" r="2.6" class="bm-eye"/><circle cx="38.5" cy="6.5" r="2.6" class="bm-eye"/>
+      <circle cx="33.9" cy="6.5" r="1.1" class="bm-pupil"/><circle cx="38.9" cy="6.5" r="1.1" class="bm-pupil"/>
+      <path d="M8 6 C 8 0, 16 0, 17 6" class="bm-wire"/>
+      <circle cx="11" cy="22" r="6" class="bm-tire"/><circle cx="11" cy="22" r="3" class="bm-hub"/>
+      <circle cx="29" cy="22" r="6" class="bm-tire"/><circle cx="29" cy="22" r="3" class="bm-hub"/>
+    </symbol>
+  </svg>
   <header class="top">
     <div class="top-row">
-      <a class="brand" href="#now" aria-label="Carkaroo, live factory">
-        <!-- Roo, the Carkaroo car: graphite body, yellow racing stripe and hubs, ultrasonic "eyes" -->
-        <svg class="brand-mark" viewBox="0 0 44 30" aria-hidden="true">
-          <symbol id="roo" viewBox="0 0 44 30">
-          <rect x="3" y="6" width="34" height="14" rx="4" class="bm-body"/>
-          <rect x="3" y="12" width="27" height="3" class="bm-stripe"/>
-          <rect x="30" y="2" width="12" height="9" rx="2" class="bm-sonar"/>
-          <circle cx="33.5" cy="6.5" r="2.6" class="bm-eye"/><circle cx="38.5" cy="6.5" r="2.6" class="bm-eye"/>
-          <circle cx="33.9" cy="6.5" r="1.1" class="bm-pupil"/><circle cx="38.9" cy="6.5" r="1.1" class="bm-pupil"/>
-          <path d="M8 6 C 8 0, 16 0, 17 6" class="bm-wire"/>
-          <circle cx="11" cy="22" r="6" class="bm-tire"/><circle cx="11" cy="22" r="3" class="bm-hub"/>
-          <circle cx="29" cy="22" r="6" class="bm-tire"/><circle cx="29" cy="22" r="3" class="bm-hub"/>
-        </symbol>
-          <use href="#roo"/>
-        </svg>
-        <span class="brand-name">Carka<span class="roo">roo</span></span>
-      </a>
+      <a class="brand" href="#now" aria-label="Carkaroo, live factory"><span id="logo"></span></a>
       <nav class="tabs" aria-label="Pages">
         <a href="#now" data-tab="now">Now</a>
         <a href="#stations" data-tab="stations">Stations</a>
@@ -42,6 +42,7 @@
         <a href="#setup" data-tab="setup" class="tab-setup" hidden>Setup</a>
       </nav>
       <div class="status">
+        <button id="theme" class="theme-btn" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">&#9790;</span></button>
         <a id="mode-pill" class="mode-pill" href="#setup" hidden></a>
         <span id="clock" class="clock" title="Factory time">--:--</span>
         <span id="link" class="link off">Connecting…</span>
@@ -55,6 +56,7 @@
     <section class="page" data-page="now" aria-label="Now">
       <div class="now-grid">
         <div class="now-left">
+          <div id="roo-buddy" class="roo-spot"></div>
           <div id="hero" class="hero"><p class="waiting"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>Roo is waiting for the AI…</p></div>
           <div id="next" class="next"></div>
           <div id="kpis" class="kpis"></div>
@@ -143,6 +145,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <svg id="map" class="map" role="img" aria-label="Factory floor with the track, stations, racks and the car"></svg>
+  <script src="/design/roo.js"></script>
   <script src="/static/app.js"></script>
   <script src="/static/editor.js"></script>
 </body>

@@ -21,6 +21,39 @@ const obstacles = new Map();  // "A|B" -> sim time it disappears (obstacles this
 let lastTs = 0;
 let lastSnap = null;
 
+// ---------- Roo: the logo's eyes and Roo on the Now page react to the live data (design/roo.js) ----------
+const rooLogo = Roo.logo($("#logo"));
+const rooBuddy = Roo.buddy($("#roo-buddy"));
+const rooMem = {};
+function renderRoo(d) {
+  const r = Roo.read(d, rooMem);
+  rooLogo.set(r.mood);
+  rooBuddy.set(r.mood, r.say);
+}
+// Try it: Roo gets curious when you change something
+$("#controls").addEventListener("click", (ev) => { if (ev.target.closest("button")) Roo.poke(rooMem); });
+
+// ---------- light / dark ----------
+// starts with the computer's setting; the choice is remembered (the page reads it before drawing)
+function darkNow() {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function themeLabel() {
+  const dark = darkNow(), b = $("#theme");
+  b.innerHTML = `<span aria-hidden="true">${dark ? "&#9728;" : "&#9790;"}</span>`;
+  b.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  b.title = dark ? "Light mode" : "Dark mode";
+}
+$("#theme").addEventListener("click", () => {
+  const next = darkNow() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem("carkaroo-theme", next); } catch (e) { /* private mode: not remembered */ }
+  themeLabel();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeLabel);
+themeLabel();
+
 // ---------- helpers ----------
 function esc(t) {
   return String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -476,7 +509,10 @@ $("#warehouse").addEventListener("click", async (ev) => {
   const b = ev.target.closest("[data-refill]");
   if (!b) return;
   const m = b.dataset.refill, info = layout.materials[m];
-  if (await post("/api/refill", { material: m })) toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
+  if (await post("/api/refill", { material: m })) {
+    toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
+    rooBuddy.play("love", 1800, `Thanks for refilling ${m}!`);
+  }
 });
 
 function buildControls() {
@@ -730,9 +766,12 @@ async function poll() {
       lastSnap = d;
       render(d);
     }
+    renderRoo(d);
     setLink(true, d.state);
   } catch (e) {
     setLink(false, null);
+    rooLogo.set("thinking");
+    rooBuddy.set("thinking", "I can't reach the AI. Is the app running?");
   }
   setTimeout(poll, 300);
 }

@@ -12,6 +12,16 @@
 .tabs a[aria-current="page"] { color: var(--primary-ink); background: var(--primary); transform: skewX(var(--skew)); box-shadow: 0 3px 0 var(--signal); }
 .status { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 .clock { font: 500 14px var(--mono); color: var(--ink-2); }
+.brand { text-decoration: none; }
+.brand .roo-logo { --size: 31px; }
+/* light / dark switch */
+.theme-btn { width: 36px; height: 36px; padding: 0; display: grid; place-items: center; border-radius: 50%;
+  background: var(--card); color: var(--ink); border: 2px solid var(--line-2); font: 18px/1 var(--sans); box-shadow: none; }
+.theme-btn:hover { border-color: var(--ink); background: var(--card); }
+
+/* Roo on the Now page: the main character, with its speech bubble */
+.roo-spot { --roo-w: 172px; margin: -4px 0 22px; min-height: 92px; }
+.roo-spot .roo-say { max-width: 34ch; }
 
 main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 40px; }
 .foot { max-width: 1240px; margin: 0 auto; padding: 18px 24px 32px; display: flex; gap: 10px; align-items: center;
