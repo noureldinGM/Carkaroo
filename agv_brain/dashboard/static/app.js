@@ -1,6 +1,6 @@
 // Carkaroo live dashboard: polls /api/snapshot and draws what the AI sees and decides.
-// Pages: Now, Stations, AI, History, Try it, and Setup (simulation or real factory).
-// Only the open page is redrawn.
+// Pages: Now (with the "Try it" controls under the map), Stations, AI, History, and Setup
+// (simulation or real factory). Only the open page is redrawn.
 "use strict";
 
 const $ = (s) => document.querySelector(s);
@@ -8,13 +8,14 @@ const SVGNS = "http://www.w3.org/2000/svg";
 const OUT = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 const ANGLE = { N: -90, E: 0, S: 90, W: 180 };
 const SPUR = 26;              // gap between a line end and its box, in map units
-const PAGES = ["now", "stations", "ai", "history", "try", "setup"];
+const PAGES = ["now", "stations", "ai", "history", "setup"];
 
 let layout = null;
 let simCar = false;            // the car is simulated: obstacle and battery controls
 let simStations = false;       // the stations are simulated: stock control
 let layoutVersion = -1;
 let page = "now";
+let tryOpen = false;           // the "Try it" controls under the map on the Now page
 let nodes = {};
 let map = {};                 // svg layers and per-node box elements
 const obstacles = new Map();  // "A|B" -> sim time it disappears (obstacles this page placed)
@@ -100,29 +101,75 @@ function ordered(dec) {
 }
 
 // ---------- pages ----------
+// the tabs share one slanted asphalt plate with a yellow kerb that slides to the open page
+const tabInk = document.createElement("span");
+tabInk.className = "tab-ink";
+tabInk.setAttribute("aria-hidden", "true");
+$(".tabs").prepend(tabInk);
+function moveTabInk() {
+  const a = document.querySelector('.tabs a[aria-current="page"]');
+  if (!a || a.hidden) { tabInk.style.opacity = "0"; return; }
+  tabInk.style.opacity = "1";
+  tabInk.style.width = `${a.offsetWidth}px`;
+  tabInk.style.transform = `translateX(${a.offsetLeft}px) skewX(var(--skew))`;
+  // a short squash-and-stretch on the way, like a car braking into its spot
+  if ($(".tabs").classList.contains("ready")) { tabInk.classList.remove("hop"); void tabInk.offsetWidth; tabInk.classList.add("hop"); }
+  // on a narrow phone the tab bar scrolls sideways: keep the open tab in view (never scrolls the page)
+  const bar = $(".tabs");
+  if (bar.scrollWidth > bar.clientWidth + 12) bar.scrollLeft = a.offsetLeft - (bar.clientWidth - a.offsetWidth) / 2;
+}
+window.addEventListener("resize", moveTabInk);
+// widths change when the display font arrives; after that first placement the plate slides
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
+  moveTabInk();
+  requestAnimationFrame(() => requestAnimationFrame(() => $(".tabs").classList.add("ready")));
+});
+
 function route() {
   const want = location.hash.slice(1);
   const before = page;
+  // the old "Try it" page is now the drawer under the map on the Now page
+  if (want === "try") { setTry(true); history.replaceState(null, "", "#now"); }
   page = PAGES.includes(want) ? want : "now";
   if (page !== before) window.scrollTo(0, 0);
   document.querySelectorAll(".page").forEach((s) => { s.hidden = s.dataset.page !== page; });
   document.querySelectorAll(".tabs a").forEach((a) =>
     a.dataset.tab === page ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
-  const svg = $("#map");
-  if (layout) {
-    (page === "try" ? $("#slot-try") : $("#slot-now")).appendChild(svg);
-    svg.classList.add("placed");
-    svg.classList.toggle("clickable", simCar && page === "try");
-  }
+  moveTabInk();
+  placeMap();
   if (lastSnap) render(lastSnap);
   if (page === "setup") loadSetup();
+  if (want === "try") $("#try-panel").scrollIntoView({ block: "start" });
 }
 window.addEventListener("hashchange", route);
 
+function placeMap() {
+  if (!layout) return;
+  const svg = $("#map");
+  if (svg.parentNode !== $("#slot-now")) $("#slot-now").appendChild(svg);
+  svg.classList.add("placed");
+  svg.classList.toggle("clickable", simCar && tryOpen);
+  $("#floor-title").textContent = simCar && tryOpen ? "Click a line to put an obstacle on it" : "Factory floor";
+}
+
+function setTry(open) {
+  tryOpen = open;
+  $("#try-panel").hidden = !open;
+  const b = $("#try-toggle");
+  b.setAttribute("aria-expanded", String(open));
+  b.textContent = open ? "Close Try it" : "Try it: change what the AI sees";
+  b.className = open ? "ghost" : "go";
+  placeMap();
+}
+$("#try-toggle").addEventListener("click", () => {
+  setTry(!tryOpen);
+  if (tryOpen) $("#try-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
 // ---------- map (built once) ----------
 function boxSize(n) {
-  if (n.type === "station") return [126, 42];
-  return [86, 42];
+  if (n.type === "station") return [156, 52];
+  return [104, 52];
 }
 
 // Place the boxes of line ends (racks, stations, dock) outside the track and push
@@ -183,7 +230,7 @@ function buildMap() {
     const line = sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "track" }, g);
     const hit = sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "hit" }, g);
     hit.addEventListener("click", () => placeObstacle(a, b));
-    hit.addEventListener("mouseenter", () => simCar && page === "try" && line.classList.add("hover"));
+    hit.addEventListener("mouseenter", () => simCar && tryOpen && line.classList.add("hover"));
     hit.addEventListener("mouseleave", () => line.classList.remove("hover"));
   }
   for (const raw of layout.nodes) {
@@ -206,22 +253,22 @@ function buildMap() {
     const entry = { rect };
     if (n.type === "station") {
       const st = layout.stations[n.id];
-      sv("text", { x: 11, y: 18, class: "box-title" }, g).textContent = n.id;
-      sv("text", { x: 11, y: 33, class: "box-sub" }, g).textContent = st.name.length > 17 ? st.name.slice(0, 16) + "…" : st.name;
-      entry.dot = sv("circle", { cx: w - 13, cy: 14, r: 5, class: "dot ok" }, g);
+      sv("text", { x: 12, y: 22, class: "box-title" }, g).textContent = n.id;
+      sv("text", { x: 12, y: 41, class: "box-sub" }, g).textContent = st.name.length > 17 ? st.name.slice(0, 16) + "…" : st.name;
+      entry.dot = sv("circle", { cx: w - 15, cy: 16, r: 6.5, class: "dot ok" }, g);
       sv("title", {}, g).textContent = `${n.id} · ${st.name}`;
     } else if (n.type === "rack") {
       const m = Object.keys(layout.materials).find((k) => layout.materials[k].rack === n.id);
       if (m) {
-        sv("rect", { x: 9, y: 10, width: 22, height: 22, rx: 5, class: `chip ${m}` }, g);
-        sv("text", { x: 20, y: 25.5, "text-anchor": "middle", class: "chip-text" }, g).textContent = m;
+        sv("rect", { x: 10, y: 12, width: 28, height: 28, rx: 6, class: `chip ${m}` }, g);
+        sv("text", { x: 24, y: 32, "text-anchor": "middle", class: "chip-text" }, g).textContent = m;
       }
-      sv("text", { x: 39, y: 18, class: "box-title" }, g).textContent = n.id;
-      sv("text", { x: 39, y: 33, class: "box-sub" }, g).textContent = "rack";
+      sv("text", { x: 46, y: 22, class: "box-title" }, g).textContent = n.id;
+      sv("text", { x: 46, y: 41, class: "box-sub" }, g).textContent = "rack";
       sv("title", {}, g).textContent = m ? `Rack ${n.id}: ${m} · ${layout.materials[m].name}` : n.id;
     } else {
-      sv("text", { x: 11, y: 18, class: "box-title" }, g).textContent = n.id;
-      sv("text", { x: 11, y: 33, class: "box-sub" }, g).textContent = "charger";
+      sv("text", { x: 12, y: 22, class: "box-title" }, g).textContent = n.id;
+      sv("text", { x: 12, y: 41, class: "box-sub" }, g).textContent = "charger";
       sv("title", {}, g).textContent = "Charging dock";
     }
     map.box[n.id] = entry;
@@ -245,11 +292,10 @@ function buildMap() {
   const cargoRect = sv("rect", { x: -11, y: -11, width: 22, height: 22, rx: 5, class: "chip" }, cargo);
   const cargoText = sv("text", { x: 0, y: 4.5, "text-anchor": "middle", class: "chip-text" }, cargo);
   map.car = { g: car, body, cargo, cargoRect, cargoText };
-  $("#try-hint").textContent = simCar ? "Click a line to put an obstacle on it" : "Factory floor";
 }
 
 function placeObstacle(a, b) {
-  if (!simCar || page !== "try") return;
+  if (!simCar || !tryOpen || page !== "now") return;
   if (!confirm(`Put an obstacle on the line ${a}–${b} for 60 simulated seconds?\nThe car stops there; if it is still blocked, the AI finds another way.`)) return;
   post("/api/sim", { cmd: "obstacle", edge: [a, b], duration_s: 60 });
   obstacles.set(`${a}|${b}`, lastTs + 60);
@@ -339,10 +385,38 @@ function carSentence(state) {
   return `Roo ${CAR_DOING[car.mode] || car.mode.toLowerCase()} at ${car.node}.`;
 }
 
+const batteryText = (state) => `⚡ Battery ${Math.round(state.car.battery)}%`;
+
+// what Roo is doing right now, as the big line on the Now page
+function taskHero(state) {
+  const car = state.car, t = car.task;
+  if (t.kind === "charge") {
+    return `<div class="label eyebrow">Roo now</div>
+      <h1>${car.mode === "CHARGING" ? "Charging at the dock" : "Going to charge"}</h1>
+      <p class="why">The battery is low, so Roo charges before the next delivery.</p>`;
+  }
+  const st = state.stations[t.station] || { name: t.station, materials: {} };
+  const v = st.materials[t.material];
+  const left = v ? `${esc(st.name)} has <b>${Math.round(v.stock)} ${esc(t.material)} left</b> and runs out in <b>${fmtS(v.stockout_s)}</b>.` : "";
+  const busy = car.mode === "LIFTING" ? " Lifting the box now." : car.mode === "LOWERING" ? " Putting the box down now." : "";
+  const head = t.leg === 0
+    ? `<h1><span>Fetching</span>${chip(t.material, "big")}<span>for ${esc(st.name)}</span></h1>
+       <p class="why">Picking it up at rack ${esc(t.legs[0].path.at(-1))}. ${left}${busy}</p>`
+    : `<h1><span>Carrying</span>${chip(t.material, "big")}<span>to ${esc(st.name)}</span></h1>
+       <p class="why">${left}${busy}</p>`;
+  return `<div class="label eyebrow">Roo now</div>${head}
+    ${t.blocked ? `<span class="badge crit">Stopped by an obstacle: after 10 s the AI finds another way</span>` : ""}`;
+}
+
 function renderHero(dec, state) {
   const hero = $("#hero");
   const q = ordered(dec);
-  const label = dec && dec.preview && state.car.task ? "Next, when Roo is free" : "The AI's choice";
+  const busy = !!(state.car.online && state.car.task);
+  if (busy) {
+    hero.innerHTML = `${taskHero(state)}<p class="car">${batteryText(state)}</p>`;
+    return;
+  }
+  const label = "The AI's choice";
   if (!q.length) {
     const waiting = state.requests.length;
     // requests are open but the safety rules let none through (empty warehouse, blocked line, ...)
@@ -353,20 +427,16 @@ function renderHero(dec, state) {
       <p class="why">${plural(waiting, "request")} waiting, but the safety rules stop the car:</p>
       <ul class="blocked">${reasons.map((a) => `<li>${esc(a)}</li>`).join("") || "<li>Checking again…</li>"}</ul>
       ${reasons.some((a) => a.startsWith("Warehouse")) ? `<p class="why">Restocked it? Press <b>Refilled</b> on the <a href="#stations">Stations page</a>.</p>` : ""}
-      <p class="car">${esc(carSentence(state))}</p>` : `
+      ${carLine(state)}` : `
       <div class="label eyebrow">The AI's choice</div>
       <h1>All stocked up</h1>
       <p class="why">Every station has enough for now, so Roo takes a break. The AI asks for a delivery
         by itself as soon as a station would run low before the car could get there.</p>
-      <p class="car">${esc(carSentence(state))}</p>`;
+      ${carLine(state)}`;
     return;
   }
   const first = q[0];
-  const best = q.find((r) => r.request_id === dec.optimizer_best);
-  const pct = dec.best_cost ? 100 * dec.regret / dec.best_cost : 0;
-  const badge = q.length < 2 ? ""
-    : dec.optimizer_agrees ? `<span class="badge good">✓ Best possible choice</span>`
-    : `<span class="badge warn">≈ Almost best: ${pct.toFixed(1)}% more cost${best ? `; the optimizer would start with ${esc(best.material)} → ${esc(best.station)}` : ""}</span>`;
+  const badge = bestBadge(dec, q);
   hero.innerHTML = `
     <div class="label eyebrow">${label}</div>
     <h1><span>Bring</span>${chip(first.material, "big")}<span>to ${esc(first.station_name)}</span></h1>
@@ -374,28 +444,48 @@ function renderHero(dec, state) {
       <b>${fmtS(first.stockout_s)}</b>. The trip takes ${fmtS(first.trip_s)}.${first.slack_s < 0 ? " It stops for a short time even if served now, so it cannot wait." : ""}</p>
     ${badge}
     ${dec.charge_first ? `<p><span class="badge crit">⚡ Battery too low: the car charges first</span></p>` : ""}
-    <p class="car" style="margin-top:16px">${esc(carSentence(state))}</p>`;
+    ${carLine(state)}`;
 }
 
-function renderNext(dec) {
+// "✓ Best possible choice" when the exact optimizer agrees, else "≈ Almost best"
+function bestBadge(dec, q) {
+  if (q.length < 2) return "";
+  if (dec.optimizer_agrees) return `<span class="badge good">✓ Best possible choice</span>`;
+  const best = q.find((r) => r.request_id === dec.optimizer_best);
+  const pct = dec.best_cost ? 100 * dec.regret / dec.best_cost : 0;
+  return `<span class="badge warn">≈ Almost best: ${pct.toFixed(1)}% more cost${best ? `; the optimizer would start with ${esc(best.material)} → ${esc(best.station)}` : ""}</span>`;
+}
+
+function carLine(state) {
+  return `<p class="car">${esc(carSentence(state))} <span class="bat">${batteryText(state)}</span></p>`;
+}
+
+// under the big line: the AI's next choice while Roo is busy, else a link to the full order
+function renderNext(dec, state) {
   const q = ordered(dec);
-  const rest = q.slice(1, 4);
-  $("#next").innerHTML = !rest.length ? "" : `
-    <h2>Then</h2>
-    <ol>${rest.map((r, i) => `<li><span class="n">${i + 2}</span>${chip(r.material)}
-      <span class="st">${esc(r.station_name)}</span>
-      <span class="out${r.slack_s < 60 ? " urgent" : ""}">runs out in ${fmtS(r.stockout_s)}</span></li>`).join("")}</ol>
-    ${q.length > 4 ? `<p class="more">+${q.length - 4} more · <a href="#ai">see the AI page</a></p>` : ""}`;
+  const busy = !!(state.car.online && state.car.task);
+  const more = (n) => n > 0 ? `<p class="more">${plural(n, "more request")} waiting · <a href="#ai">see the full order</a></p>` : "";
+  if (!busy || !q.length) { setHtml($("#next"), more(q.length - 1)); return; }
+  const first = q[0];
+  setHtml($("#next"), `<div class="up-next">
+      <div class="nx-label">Next, when Roo is free</div>
+      <p class="nx"><span>Bring</span>${chip(first.material)}<span>to ${esc(first.station_name)}</span></p>
+      <p class="nx-why"><span class="${first.slack_s < 60 ? "urgent" : ""}">runs out in ${fmtS(first.stockout_s)}</span>
+        · trip ${fmtS(first.trip_s)}</p>
+      ${bestBadge(dec, q)}
+      ${dec.charge_first ? `<span class="badge crit">⚡ Battery too low: Roo charges first</span>` : ""}
+    </div>${more(q.length - 1)}`);
 }
 
+// History: the totals so far
 function renderKpis(state) {
   const stop = Object.values(state.stations).reduce((acc, st) =>
     acc + Object.values(st.materials).reduce((a, v) => a + v.stopped_s, 0), 0);
   const bat = Math.round(state.car.battery);
-  $("#kpis").innerHTML = `
+  setHtml($("#hist-kpis"), `
     <div class="kpi"><b>${state.stats.deliveries}</b><span>deliveries</span></div>
     <div class="kpi${stop > 0.5 ? " bad" : ""}"><b>${fmtS(stop)}</b><span>lines stopped</span></div>
-    <div class="kpi${bat < 20 ? " bad" : ""}"><b>${bat}%</b><span>battery</span></div>`;
+    <div class="kpi${bat < 20 ? " bad" : ""}"><b>${bat}%</b><span>battery</span></div>`);
 }
 
 // ---------- Stations ----------
@@ -404,7 +494,7 @@ const PRIORITY = { 3: "high priority", 2: "medium priority", 1: "low priority" }
 function renderStations(state) {
   const t = state.car.task;
   const onTheWay = t && t.kind === "delivery" ? `${t.station}:${t.material}` : null;
-  $("#stations").innerHTML = Object.entries(state.stations).map(([sid, st]) => {
+  $("#station-list").innerHTML = Object.entries(state.stations).map(([sid, st]) => {
     const mats = Object.entries(st.materials).map(([m, v]) => {
       const frac = Math.max(0, Math.min(1, v.stock / v.capacity));
       const cls = v.stock <= 0 ? "out" : v.stock < v.safety_stock ? "low" : "ok";
@@ -447,34 +537,42 @@ function renderAI(dec, state) {
 
   const q = ordered(dec);
   if (!q.length) {
-    $("#ai-table").innerHTML = `<p class="quiet">No requests are waiting right now.</p>`;
-    $("#ai-why").innerHTML = "";
+    $("#ai-table").innerHTML = `<p class="quiet empty">No requests are waiting right now.</p>`;
+    $("#ai-why").innerHTML = `<p class="quiet">Nothing to explain until a station asks for a delivery.</p>`;
     return;
   }
+  // the short table: what the AI thinks, and how urgent each request is
   const others = q.length - 1;
-  const costs = q.map((r) => r.cost_if_first).filter((c) => c !== null && c !== undefined);
-  const minCost = Math.min(...costs);
   const rows = q.map((r, i) => {
     const score = r.score === null || others === 0 ? "–"
       : `<span class="meter"><i><b style="width:${(100 * r.score / others).toFixed(0)}%"></b></i>${r.score.toFixed(1)} of ${others}</span>`;
-    const cost = r.cost_if_first === null || r.cost_if_first === undefined ? "–"
-      : r.cost_if_first === minCost ? `<span class="star">${r.cost_if_first.toFixed(0)} ★</span>` : r.cost_if_first.toFixed(0);
     return `<tr class="${i === 0 ? "first" : ""}">
       <td class="num">${i + 1}</td>
       <td><span class="req">${chip(r.material)}${esc(r.station_name)}</span></td>
       <td>${score}</td>
-      <td class="num${r.slack_s < 60 ? " urgent" : ""}">${fmtS(r.stockout_s)}</td>
-      <td class="num">${fmtS(r.trip_s)}</td>
-      <td class="num">${cost}</td></tr>`;
+      <td class="num${r.slack_s < 60 ? " urgent" : ""}">${fmtS(r.stockout_s)}</td></tr>`;
   }).join("");
   $("#ai-table").innerHTML = `<table class="rank">
       <thead><tr><th>#</th><th>Request</th>
         <th title="How many of the other requests this one should go before (higher = sooner)">AI score</th>
-        <th title="Time until the station runs out">Runs out in</th><th title="Car to the rack, then to the station">Trip</th>
-        <th title="Exact optimizer: cost of the best plan that starts with this request (lower is better)">Cost if first</th></tr></thead>
+        <th title="Time until the station runs out">Runs out in</th></tr></thead>
       <tbody>${rows}</tbody></table>`;
+
+  // the details, folded away: trip times, the optimizer's costs and the reasons
+  const costs = q.map((r) => r.cost_if_first).filter((c) => c !== null && c !== undefined);
+  const minCost = Math.min(...costs);
+  const detail = q.map((r, i) => {
+    const cost = r.cost_if_first === null || r.cost_if_first === undefined ? "–"
+      : r.cost_if_first === minCost ? `<span class="star">${r.cost_if_first.toFixed(0)} ★</span>` : r.cost_if_first.toFixed(0);
+    return `<tr><td class="num">${i + 1}</td><td><span class="req">${chip(r.material)}${esc(r.station_name)}</span></td>
+      <td class="num">${fmtS(r.trip_s)}</td><td class="num">${cost}</td></tr>`;
+  }).join("");
   $("#ai-why").innerHTML = `
-    <h2>Why this order</h2>
+    <table class="rank small">
+      <thead><tr><th>#</th><th>Request</th><th title="Car to the rack, then to the station">Trip</th>
+        <th title="Exact optimizer: cost of the best plan that starts with this request (lower is better)">Cost if first</th></tr></thead>
+      <tbody>${detail}</tbody></table>
+    <h3>Why this order</h3>
     <ul>${dec.reasons.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
     <p class="note">AI score: the ML ranker compares every pair of requests; "3.8 of 4" means it should go before
       about 3.8 of the 4 others. The highest goes first, and the AI decides again after every delivery.
@@ -489,10 +587,54 @@ function shortText(e) {
   // the long "why" is on the Now and AI pages: keep the history short
   return e.type === "task" ? e.text.split(" first.")[0] + " first" : e.type === "request" ? e.text.split(":")[0] : e.text;
 }
+// events that belong to the delivery task before them (until it is delivered)
+const IN_TASK = new Set(["pickup", "delivered", "obstacle", "reroute", "clear", "unblock"]);
+const TASK_RE = /^Task (\d+): (\S+) -> (\S+) \(([^)]*)\)/;
+
+// one card per delivery (task, pickup, delivered...), the other events as single rows; newest first
+function groupEvents(events) {
+  const items = [];
+  let open = null;
+  for (const e of [...events].reverse()) {          // oldest first
+    if (e.type === "task") {
+      const m = TASK_RE.exec(e.text);
+      open = { kind: "run", id: m ? m[1] : "", material: m ? m[2] : "", station: m ? m[4] || m[3] : "",
+        ts: e.ts, steps: [e], done: false };
+      items.push(open);
+    } else if (open && !open.done && IN_TASK.has(e.type)) {
+      open.steps.push(e);
+      if (e.type === "delivered") open.done = true;
+    } else {
+      items.push({ kind: "one", e });
+    }
+  }
+  return items.reverse();
+}
+
+const evRow = (e) => `<li><span class="t">${clock(e.ts)}</span><span class="i ${esc(e.type)}" aria-hidden="true">${ICON[e.type] || "•"}</span><span>${esc(shortText(e))}</span></li>`;
+
 function renderHistory(state) {
-  $("#alerts").innerHTML = state.alerts.slice(0, 3).map((a) => `<div class="alert">${esc(a.text)}</div>`).join("");
-  $("#feed").innerHTML = state.events.map((e) =>
-    `<li><span class="t">${clock(e.ts)}</span><span class="i ${esc(e.type)}" aria-hidden="true">${ICON[e.type] || "•"}</span><span>${esc(shortText(e))}</span></li>`).join("");
+  setHtml($("#alerts"), state.alerts.slice(0, 3).map((a) =>
+    `<div class="alert crit"><span class="al-i" aria-hidden="true">!</span><span>${esc(a.text)}</span></div>`).join(""));
+  if (!state.events.length) {
+    setHtml($("#feed"), `<p class="empty"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>
+      Nothing has happened yet. Roo is waiting for the first request.</p>`);
+    return;
+  }
+  let html = "", singles = "";
+  const flush = () => { if (singles) html += `<ol class="ev-list">${singles}</ol>`; singles = ""; };
+  for (const it of groupEvents(state.events)) {
+    if (it.kind === "one") { singles += evRow(it.e); continue; }
+    flush();
+    const last = it.steps.at(-1);
+    const tag = it.done ? `<span class="tag done">delivered</span>` : `<span class="tag way">on the way</span>`;
+    html += `<article class="run${it.done ? "" : " live"}">
+      <header>${it.material ? chip(it.material) : ""}<b>${it.station ? `To ${esc(it.station)}` : "Delivery"}</b>
+        <span class="run-id">${it.id ? `task ${esc(it.id)} · ` : ""}${clock(it.ts)}–${clock(last.ts)}</span>${tag}</header>
+      <ol class="steps">${it.steps.map(evRow).join("")}</ol></article>`;
+  }
+  flush();
+  setHtml($("#feed"), html);
 }
 
 // ---------- header ----------
@@ -614,8 +756,10 @@ function buildSetup() {
     </div>
     <div class="row mode-row">
       <label>Track <select id="set-track"${readOnly ? " disabled" : ""}>${trackOpts}</select></label>
-      <label id="speed-wrap">Speed <input id="set-speed" type="range" min="1" max="20" step="1" value="${s.speed}"${readOnly ? " disabled" : ""}>
-        <span id="speed-val">x${s.speed}</span></label>
+      <label id="speed-wrap">Speed <span class="speed-end">real time</span>
+        <input id="set-speed" type="range" min="1" max="20" step="1" value="${s.speed}"${readOnly ? " disabled" : ""}
+          aria-describedby="speed-val"><span class="speed-end">x20</span>
+        <output id="speed-val" class="speed-val">x${s.speed}</output></label>
       <button id="set-apply"${readOnly ? " disabled" : ""}>Apply</button>
     </div>
     <p class="hint">Now running: <b>${esc(s.mode_name)}</b> on <b>${esc((s.tracks.find((x) => x.id === s.track) || {}).name || s.track)}</b>.
@@ -721,7 +865,7 @@ function updateDevices() {
 function setMode(d) {
   const pill = $("#mode-pill");
   pill.hidden = !d.mode;
-  $(".tab-setup").hidden = !d.setup;
+  if ($(".tab-setup").hidden !== !d.setup) { $(".tab-setup").hidden = !d.setup; moveTabInk(); }
   if (!d.mode) return;
   pill.textContent = (MODE_INFO[d.mode.id] || [d.mode.name])[0];
   pill.className = `mode-pill ${d.mode.id === "sim" ? "sim" : "real"}`;
@@ -731,11 +875,10 @@ function setMode(d) {
 function render(d) {
   const state = d.state, dec = d.decision;
   $("#clock").textContent = clock(state.ts);
-  if (page === "now" || page === "try") renderMap(state);
-  if (page === "now") { renderHero(dec, state); renderNext(dec); renderKpis(state); }
+  if (page === "now") { renderMap(state); renderHero(dec, state); renderNext(dec, state); }
   else if (page === "stations") renderStations(state);
   else if (page === "ai") renderAI(dec, state);
-  else if (page === "history") renderHistory(state);
+  else if (page === "history") { renderKpis(state); renderHistory(state); }
 }
 
 // the Setup page has its own, slower poll
@@ -753,12 +896,7 @@ async function poll() {
       simCar = parts.car; simStations = parts.stations;
       nodes = {}; obstacles.clear();
       buildMap(); buildControls();
-      if (first) route();
-      else {
-        (page === "try" ? $("#slot-try") : $("#slot-now")).appendChild($("#map"));
-        $("#map").classList.add("placed");
-        $("#map").classList.toggle("clickable", simCar && page === "try");
-      }
+      if (first) route(); else placeMap();
     }
     setMode(d);
     if (d.state) {

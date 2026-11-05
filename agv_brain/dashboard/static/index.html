@@ -38,12 +38,11 @@
         <a href="#stations" data-tab="stations">Stations</a>
         <a href="#ai" data-tab="ai">AI</a>
         <a href="#history" data-tab="history">History</a>
-        <a href="#try" data-tab="try">Try it</a>
         <a href="#setup" data-tab="setup" class="tab-setup" hidden>Setup</a>
       </nav>
       <div class="status">
-        <button id="theme" class="theme-btn" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">&#9790;</span></button>
         <a id="mode-pill" class="mode-pill" href="#setup" hidden></a>
+        <button id="theme" class="theme-btn" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">&#9790;</span></button>
         <span id="clock" class="clock" title="Factory time">--:--</span>
         <span id="link" class="link off">Connecting…</span>
       </div>
@@ -52,30 +51,37 @@
   </header>
 
   <main>
-    <!-- Now: the AI's choice, what comes next, and the floor -->
+    <!-- Now: what Roo is doing, the AI's next choice, and the floor. "Try it" opens the controls below. -->
     <section class="page" data-page="now" aria-label="Now">
       <div class="now-grid">
         <div class="now-left">
           <div id="roo-buddy" class="roo-spot"></div>
           <div id="hero" class="hero"><p class="waiting"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>Roo is waiting for the AI…</p></div>
           <div id="next" class="next"></div>
-          <div id="kpis" class="kpis"></div>
         </div>
         <div class="floor-card">
           <div class="floor-head">
-            <span>Factory floor</span>
+            <span id="floor-title">Factory floor</span>
             <span class="floor-legend"><i class="lg route"></i>route <i class="lg later"></i>after pickup <i class="lg blk"></i>blocked</span>
           </div>
           <div id="slot-now" class="map-slot"></div>
         </div>
       </div>
+      <div class="try-bar">
+        <button id="try-toggle" class="go" type="button" aria-expanded="false" aria-controls="try-panel">Try it: change what the AI sees</button>
+      </div>
+      <section id="try-panel" class="try-panel" aria-label="Try it" hidden>
+        <h2 class="section-title"><span>Try it</span></h2>
+        <p class="page-sub">Change what the AI sees, then watch its choice and the map above change.</p>
+        <div id="controls" class="controls"></div>
+      </section>
     </section>
 
     <!-- Stations: stock at every station and in the warehouse -->
     <section class="page" data-page="stations" aria-label="Stations" hidden>
       <h1 class="page-title">Stock</h1>
       <p class="page-sub">What every station has left, measured by its load cells. The line shows the safety level.</p>
-      <div id="stations" class="station-grid"></div>
+      <div id="station-list" class="station-grid"></div>
       <h2 class="section-title"><span>Warehouse</span></h2>
       <div id="warehouse" class="warehouse"></div>
     </section>
@@ -83,31 +89,23 @@
     <!-- AI: how the decision was made -->
     <section class="page" data-page="ai" aria-label="AI" hidden>
       <h1 class="page-title">How the AI decided</h1>
+      <p class="page-sub">The waiting requests in the order the AI would serve them. It decides again after every delivery.</p>
       <div class="ai-grid">
         <div id="ai-score" class="ai-score"></div>
         <div id="ai-table" class="ai-table"></div>
       </div>
-      <div id="ai-why" class="ai-why"></div>
+      <details id="ai-more" class="more-box">
+        <summary>Details: trip times, the optimizer's costs and why</summary>
+        <div id="ai-why" class="ai-why"></div>
+      </details>
     </section>
 
-    <!-- History: events and alerts -->
+    <!-- History: totals, alerts and what happened, one card per delivery -->
     <section class="page" data-page="history" aria-label="History" hidden>
       <h1 class="page-title">What happened</h1>
+      <div id="hist-kpis" class="kpis"></div>
       <div id="alerts" class="alerts"></div>
-      <ol id="feed" class="feed"></ol>
-    </section>
-
-    <!-- Try it: change the inputs and watch the AI react -->
-    <section class="page" data-page="try" aria-label="Try it" hidden>
-      <h1 class="page-title">Try it</h1>
-      <p class="page-sub">Change what the AI sees, then watch its choice change on the Now page.</p>
-      <div class="try-grid">
-        <div id="controls" class="controls"></div>
-        <div class="floor-card">
-          <div class="floor-head"><span id="try-hint">Factory floor</span></div>
-          <div id="slot-try" class="map-slot"></div>
-        </div>
-      </div>
+      <div id="feed" class="feed"></div>
     </section>
 
     <!-- Setup: simulation or real factory, device keys, the track -->
