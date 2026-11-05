@@ -36,7 +36,7 @@ Capstone requirements this plan covers (G12 2026/2027, "IT and AI Applications")
 - [x] `SimulatedCar` and `SimulatedStation` that speak the same messages, so the whole system runs without hardware
 - [x] Every reading, decision and car event logged to CSV in `logs/` (data for retraining and the logbook)
 - [x] Live-operation training (DAgger): live accuracy 76 % → 84 %
-- [x] Broker and cloud scripts: `start_broker.py` (with the HiveMQ Cloud bridge), `run_controller.py`, `cloud_check.py`
+- [x] Broker and cloud scripts: `start_broker.py` (with the HiveMQ Cloud bridge) and `cloud_check.py` (the old `run_controller.py` was replaced by `run_app.py`)
 - [x] Mosquitto installed; the whole simulated factory runs through it (`run_factory_sim.py --mqtt localhost:1883`), checked with `mosquitto_sub` and `tests/test_mqtt.py`
 - [x] Fixed: overlapping subscriptions made Mosquitto deliver every message twice; duplicate `done` events are now ignored (QoS 1 is "at least once")
 - [x] One program for everything (`scripts/run_app.py`) and a **Setup page**: simulation / real car / real factory, a key per device (the broker refuses anyone else, and each device only gets its own topics), and a track editor with plain-word checks

@@ -19,7 +19,9 @@ Set-Service mosquitto -StartupType Manual
 ```
 Until then the app runs the simulation only, and the Setup page says why. (`--mqtt-port 1884` uses another port instead; the firmware must then use it too.) The first time, allow Mosquitto through the Windows firewall on private networks.
 
-The older scripts still work: `run_factory_sim.py` (simulation only, `--speed 5`, `--policy fifo`) and `start_broker.py` + `run_controller.py --sim-stations`.
+Simulation only, without any broker: `run_factory_sim.py` (`--speed 5`, `--policy fifo`, `--compare 40`).
+
+The website refuses commands sent by other web pages and only accepts setup changes from the laptop itself; see [security.md](security.md).
 
 ## Does it work with the real car?
 
