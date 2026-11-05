@@ -1,0 +1,4 @@
+Job-ID;Startstation;Endstation;Distance;Frequency
+Job_From_T10_To_B;T10;B;60;6.0
+Job_From_T10_To_E;T10;E;50;3.0
+Job_From_T10_To_T12;T10;T12;40;30.0

@@ -29,13 +29,14 @@ See [docs/architecture.md](docs/architecture.md) for the diagrams.
 
 | | ML ranker | Weighted rules (hand-made) | First come, first served | Exact optimizer |
 |---|---|---|---|---|
-| Picks the best delivery: our track (1000 situations) | **90.6 %** | 61.3 % | 26.2 % | 100 % |
-| Picks the best delivery: 200 new factory layouts | **91.2 %** | 57.7 % | 27.3 % | 100 % |
-| Picks the best delivery: live operation (40 one-hour runs) | **84.2 %** | 46.8 % | 37.7 % | 100 % |
-| Extra cost vs the optimal plan (live operation) | **0.7 %** | 10.3 % | 22.9 % | 0 % |
-| Decision time | ~10 ms | < 0.1 ms | < 0.1 ms | grows with n! |
+| Picks the best delivery: our track (1000 situations) | **91.6 %** | 61.3 % | 26.2 % | 100 % |
+| Picks the best delivery: 200 new factory layouts | **91.1 %** | 57.7 % | 27.3 % | 100 % |
+| Picks the best delivery: live operation (40 one-hour runs) | **83.8 %** | 46.8 % | 37.7 % | 100 % |
+| Picks the best delivery: 14 **real** factories (KIT data set) | **85.6 %** | 41.7 % | 26.6 % | 100 % |
+| Extra cost vs the optimal plan (live operation) | **0.8 %** | 10.3 % | 22.9 % | 0 % |
+| Decision time | ~10–20 ms | < 0.1 ms | < 0.1 ms | grows with n! |
 
-The ML ranker cuts production stop time by **42 %** compared with first come, first served. Its accuracy clears the capstone's **80 %** target in all three tests: our track, factories it has never seen, and live operation, where it runs the factory itself. It was trained on our track, 400 random factory layouts, and 18,000 situations from live operation (DAgger), so a new or changed track needs no retraining. Full report: [reports/evaluation.md](reports/evaluation.md).
+The ML ranker cuts production stop time by **42 %** compared with first come, first served. Its accuracy clears the capstone's **80 %** target in all four tests: our track, factories it has never seen, live operation (where it runs the factory itself), and 14 real factories from German industry. It was trained on our track, 400 random factory layouts, 300 large random factories at real-factory scale, and 18,000 situations from live operation (DAgger), so a new or changed track needs no retraining. The real factories are never used for training. Full reports: [reports/evaluation.md](reports/evaluation.md) and [reports/real_layouts.md](reports/real_layouts.md).
 
 ![Accuracy by number of requests](reports/accuracy_by_requests.png)
 
@@ -74,6 +75,9 @@ The trained model is in `models/ranker.joblib`, so both work right away. To rebu
 ```
 ```bash
 .venv\Scripts\python scripts\evaluate.py
+```
+```bash
+.venv\Scripts\python scripts\evaluate_real_layouts.py
 ```
 ```bash
 .venv\Scripts\python -m pytest

@@ -1,0 +1,9 @@
+Station-ID;Type;x-Coordinate;y-Coordinate;Origin Station-ID
+J;S;7;22;S10
+K;S;22;22;S11
+L;S;30;22;S12
+N;S;1;30;S14
+O;S;16;30;S15
+R;Q;7;37;S18
+T10;Q,S;16;22;T10
+T12;S;37;22;T12

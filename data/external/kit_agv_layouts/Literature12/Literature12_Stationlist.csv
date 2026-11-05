@@ -1,0 +1,17 @@
+Station-ID;Type;x-Coordinate;y-Coordinate;Origin Station-ID
+A;Q;0;0;Q1
+B;Q;30;-140;Q2
+C;Q;0;-170;Q3
+D;Q;200;0;Q4
+E;Q;260;20;Q5
+F;Q;300;-80;Q6
+G;Q;160;-90;Q7
+H;Q;260;-190;Q8
+I;S;20;-90;S1
+J;S;90;-120;S2
+K;S;40;-190;S3
+L;S;170;20;S4
+M;S;250;-60;S5
+N;S;270;-120;S6
+O;S;140;-190;S7
+P;S;220;-170;S8

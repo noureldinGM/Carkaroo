@@ -16,9 +16,11 @@ from dataclasses import dataclass, field, replace
 import numpy as np
 
 from agv_brain.features import JOB_FEATURES, PAIR_FEATURES, job_matrix
-from agv_brain.layouts import layout_pool
+from agv_brain.layouts import layout_pool, plant_pool
+from agv_brain.models import Settings
 from agv_brain.optimizer import first_choice_costs
 from agv_brain.ranker import TIE_EPS, pair_examples
+from agv_brain.real_layouts import real_scenario
 from agv_brain.simulator import Context, random_scenario
 
 SPEED_FACTORS = (0.6, 0.8, 1.0, 1.2, 1.5)
@@ -41,6 +43,38 @@ def speed_variants(ctx: Context, factors=SPEED_FACTORS) -> list[Context]:
     return out
 
 
+def _label(vctx, car, jobs, sid, layout, Xs, ys, ws, gs, rows) -> None:
+    """Label one situation with the teacher and append its pair rows and readable rows."""
+    costs = first_choice_costs(vctx, jobs, car)
+    X, y, w = pair_examples(vctx, jobs, car, costs)
+    Xs.append(X), ys.append(y), ws.append(w), gs.append(np.full(len(y), sid))
+
+    F, _ = job_matrix(vctx, jobs, car)
+    best = min(costs)
+    for job, f, c in zip(jobs, F, costs):
+        row = {"scenario": sid, "layout": layout, "request": job.id, "car_node": car.node,
+               "car_heading": car.heading, "car_speed_cm_s": vctx.settings.car.speed_cm_s,
+               "material": job.material, "station": job.station}
+        row.update({name: round(float(v), 3) for name, v in zip(JOB_FEATURES, f)})
+        row["teacher_cost_if_first"] = round(c, 3)
+        row["teacher_best_first"] = int(c <= best + TIE_EPS)
+        rows.append(row)
+
+
+def generate_plants(n_scenarios: int, base: Settings, seed: int = 2, n_plants: int = 300,
+                    n_range: tuple[int, int] = (2, 6)) -> Dataset:
+    """Situations in random large factories (layouts.random_plant), at real-factory scale."""
+    rng = np.random.default_rng(seed)
+    pool = plant_pool(n_plants, seed + 1000, base)
+    Xs, ys, ws, gs, rows = [], [], [], [], []
+    for sid in range(n_scenarios):
+        k = int(rng.integers(len(pool)))
+        car, jobs = real_scenario(rng, pool[k], n_range)
+        _label(pool[k], car, jobs, sid, f"plant-{k}", Xs, ys, ws, gs, rows)
+    return Dataset(np.vstack(Xs), np.concatenate(ys), np.concatenate(ws),
+                   np.concatenate(gs), rows)
+
+
 def generate(ctx: Context, n_scenarios: int, seed: int = 1,
              n_range: tuple[int, int] = (2, 6), randomize_speed: bool = True,
              random_layouts: int = 0, layout_share: float = 0.6) -> Dataset:
@@ -57,22 +91,9 @@ def generate(ctx: Context, n_scenarios: int, seed: int = 1,
         else:
             vctx, layout = variants[int(rng.integers(len(variants)))], "ours"
         car, jobs = random_scenario(rng, vctx, n_range)
-        costs = first_choice_costs(vctx, jobs, car)
-        X, y, w = pair_examples(vctx, jobs, car, costs)
-        Xs.append(X), ys.append(y), ws.append(w), gs.append(np.full(len(y), sid))
-
-        F, _ = job_matrix(vctx, jobs, car)
-        best = min(costs)
-        for job, f, c in zip(jobs, F, costs):
-            row = {"scenario": sid, "layout": layout, "request": job.id, "car_node": car.node,
-                   "car_heading": car.heading, "car_speed_cm_s": vctx.settings.car.speed_cm_s,
-                   "material": job.material, "station": job.station}
-            row.update({name: round(float(v), 3) for name, v in zip(JOB_FEATURES, f)})
-            row["teacher_cost_if_first"] = round(c, 3)
-            row["teacher_best_first"] = int(c <= best + TIE_EPS)
-            rows.append(row)
+        _label(vctx, car, jobs, sid, layout, Xs, ys, ws, gs, rows)
     return Dataset(np.vstack(Xs), np.concatenate(ys), np.concatenate(ws),
                    np.concatenate(gs), rows)
 
 
-__all__ = ["Dataset", "generate", "speed_variants", "PAIR_FEATURES"]
+__all__ = ["Dataset", "generate", "generate_plants", "speed_variants", "PAIR_FEATURES"]
