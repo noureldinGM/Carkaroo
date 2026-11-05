@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Roo's moods · Carkaroo design system</title>
+  <link rel="icon" href="logo/carkaroo-mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="roo.css">
+  <style>
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    header.mock { display: flex; align-items: center; gap: 26px; padding: 16px 0 12px; }
+    header.mock nav { display: flex; gap: 4px; }
+    header.mock nav span { font: italic 700 16px/1 var(--display); text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; border-radius: 6px; color: var(--ink-2); }
+    header.mock nav span.on { background: var(--primary); color: var(--primary-ink); transform: skewX(var(--skew)); }
+    header.mock .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+    .lead { max-width: 70ch; color: var(--ink-2); }
+    .stage { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: center; background: var(--card);
+      border: 2.5px solid var(--outline); border-radius: 20px; box-shadow: var(--kerb); padding: 26px 28px; margin: 18px 0 8px; }
+    .stage .roo-buddy { --roo-w: 330px; }
+    .picker { display: flex; flex-wrap: wrap; gap: 8px; }
+    .picker button[aria-pressed="true"] { background: var(--signal); color: var(--signal-ink); }
+    .moods { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 18px; }
+    .mood { background: var(--card); border: 2.5px solid var(--outline); border-radius: 20px; box-shadow: var(--kerb); padding: 16px 18px 18px; }
+    .mood h3 { font: var(--text-h3); margin: 0 0 2px; }
+    .mood .when { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; }
+    .mood .roo-buddy { --roo-w: 190px; align-items: center; }
+    .mood .roo-say { font-size: 13.5px; }
+    .logos { display: flex; gap: 18px; flex-wrap: wrap; }
+    .logos > div { background: var(--card); border: 2.5px solid var(--outline); border-radius: 20px; padding: 22px 26px; display: grid; gap: 8px; justify-items: start; }
+    .logos small { color: var(--muted); }
+    table.rules { border-collapse: collapse; width: 100%; background: var(--card); border: 2.5px solid var(--outline); border-radius: 14px; overflow: hidden; }
+    table.rules th, table.rules td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 14.5px; vertical-align: top; }
+    table.rules th { font: italic 700 15px var(--display); text-transform: uppercase; letter-spacing: .05em; background: var(--primary-soft); }
+    table.rules td:first-child { font: 500 13px var(--mono); color: var(--muted); width: 2.5em; }
+    footer { padding: 28px 0 44px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 860px) { .stage { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="finish" aria-hidden="true"></div>
+  <div class="wrap">
+    <!-- how the website header will look -->
+    <header class="mock">
+      <span id="logo-top" style="--size:34px"></span>
+      <nav aria-hidden="true"><span class="on">Now</span><span>Stations</span><span>AI</span><span>History</span><span>Try it</span></nav>
+      <div class="right"><button class="ghost small" id="theme" type="button">Dark mode</button></div>
+    </header>
+
+    <h1 class="page-title">Roo's moods</h1>
+    <p class="lead">Roo reacts to what really happens in the factory. The website reads the live data three times a
+      second and picks one mood with the rules below. The logo's eyes and Roo on the Now page show the same mood, and
+      Roo says one short line about it. Try the moods here, move your mouse around (Roo looks at you when it's calm),
+      and switch to dark mode.</p>
+
+    <div class="stage">
+      <div id="big"></div>
+      <div>
+        <h2 class="section-title" style="margin-top:0"><span>Try a mood</span></h2>
+        <div class="picker" id="picker"></div>
+      </div>
+    </div>
+
+    <h2 class="section-title"><span>Every mood</span></h2>
+    <div class="moods" id="moods"></div>
+
+    <h2 class="section-title"><span>When Roo shows each mood</span></h2>
+    <p class="lead">From top to bottom, the first rule that matches wins. A mood stays at least 2.5 seconds, so Roo doesn't flicker.
+      "Curious" is the one exception: it shows for 3.5 seconds after you change something on the Try it page.</p>
+    <table class="rules"><thead><tr><th>#</th><th>Mood</th><th>Shows when</th></tr></thead><tbody id="rules"></tbody></table>
+
+    <h2 class="section-title"><span>The new logo</span></h2>
+    <p class="lead">The poster's wordmark, made for the web: "Carkar" in Barlow Condensed Bold Italic, and Roo's eyes as the "oo",
+      with the yellow antenna above and the yellow line under. Its eyes blink and react too. It replaces the old
+      "Carka [roo]" logo everywhere on the website.</p>
+    <div class="logos">
+      <div><span class="lg" style="--size:56px"></span><small>Big: style guide, slides</small></div>
+      <div><span class="lg" style="--size:30px"></span><small>Header: 30 px</small></div>
+      <div><span class="lg" style="--size:20px"></span><small>Smallest: 20 px</small></div>
+    </div>
+    <footer>Carkaroo design system · <code>design/roo.js</code> + <code>design/roo.css</code></footer>
+  </div>
+
+  <script src="roo.js"></script>
+  <script>
+    // sample data for each mood's line
+    const SAMPLE = {
+      asleep: {}, thinking: {}, shocked: { where: "J3" },
+      sad: { station: "Packaging", material: "B", coming: true },
+      proud: { station: "Assembly", material: "A", count: 12 },
+      sleepy: { battery: 15 }, charging: { battery: 64 },
+      worried: { station: "Packaging", material: "B", left: "42 s" },
+      driving: { carrying: true, material: "C", station: "Welding" },
+      happy: {}, curious: {},
+    };
+    const ALL = [...Roo.ORDER, "curious"];
+    const line = (m) => Roo.MOODS[m].say(SAMPLE[m]);
+
+    const header = Roo.logo(document.getElementById("logo-top"));
+    const big = Roo.buddy(document.getElementById("big"), { mood: "happy", say: line("happy") });
+    const logos = [...document.querySelectorAll(".lg")].map((el) => Roo.logo(el));
+
+    const picker = document.getElementById("picker");
+    for (const m of ALL) {
+      const b = document.createElement("button");
+      b.className = "ghost small"; b.type = "button"; b.textContent = Roo.MOODS[m].name;
+      b.setAttribute("aria-pressed", m === "happy");
+      b.onclick = () => {
+        big.set(m, line(m)); header.set(m); logos.forEach((l) => l.set(m));
+        picker.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      };
+      picker.appendChild(b);
+    }
+
+    const grid = document.getElementById("moods");
+    for (const m of ALL) {
+      const card = document.createElement("article");
+      card.className = "mood";
+      card.innerHTML = `<h3>${Roo.MOODS[m].name}</h3><p class="when">${Roo.MOODS[m].when}</p><div></div>`;
+      grid.appendChild(card);
+      Roo.buddy(card.querySelector("div"), { mood: m, say: line(m) });
+    }
+
+    document.getElementById("rules").innerHTML = ALL.map((m, i) =>
+      `<tr><td>${m === "curious" ? "*" : i + 1}</td><td><b>${Roo.MOODS[m].name}</b></td><td>${Roo.MOODS[m].when}</td></tr>`).join("");
+
+    // light / dark, remembered like on the website
+    const btn = document.getElementById("theme"), html = document.documentElement;
+    const saved = localStorage.getItem("carkaroo-theme");
+    if (saved) html.dataset.theme = saved;
+    const dark = () => html.dataset.theme === "dark" || (!html.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+    const label = () => { btn.textContent = dark() ? "Light mode" : "Dark mode"; };
+    btn.onclick = () => { html.dataset.theme = dark() ? "light" : "dark"; localStorage.setItem("carkaroo-theme", html.dataset.theme); label(); };
+    label();
+  </script>
+</body>
+</html>
