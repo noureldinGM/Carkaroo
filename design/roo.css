@@ -1,0 +1,251 @@
+/* Roo's face and moods: the logo eyes and Roo the character. Needs tokens.css; built by roo.js.
+   A mood is data-mood="…" on the element. It only moves the eyes, the antenna and small effects. */
+
+/* ---------- the logo: "Carkar" + Roo's eyes as "oo", antenna over them, yellow line under ---------- */
+.roo-logo { --size: 30px; display: inline-flex; align-items: baseline; position: relative; padding-bottom: .2em;
+  font: italic 700 var(--size)/1 var(--display); letter-spacing: .005em; color: var(--ink); white-space: nowrap; }
+.roo-logo .word { display: inline-block; }
+.roo-logo .eyes { height: .9em; width: auto; margin-left: .03em; overflow: visible; }
+.roo-logo::after { content: ""; position: absolute; left: .04em; right: -.06em; bottom: 0; height: .11em;
+  border-radius: .06em; background: var(--signal); }
+.roo-logo .eye-ring, .roo-logo .lid { fill: var(--ink); }
+.roo-logo .eye-white { fill: #fff; }
+.roo-logo .mark { stroke: var(--paper); stroke-width: 3.6; }
+.roo-logo .antenna { fill: none; stroke: var(--signal); stroke-width: 5; stroke-linecap: round; }
+
+/* ---------- Roo the character ---------- */
+.roo-buddy { --roo-line: #121314; display: flex; align-items: center; gap: 14px; }
+:root[data-theme="dark"] .roo-buddy { --roo-line: #8b9096; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .roo-buddy { --roo-line: #8b9096; } }
+.roo-buddy .car { width: var(--roo-w, 150px); height: auto; flex: none; overflow: visible; }
+.car .body { fill: #2a2d31; stroke: var(--roo-line); stroke-width: 1.6; }
+.car .stripe { fill: var(--signal); }
+.car .seam { fill: none; stroke: #5d6268; stroke-width: 1.2; stroke-linecap: round; }
+.car .head { fill: var(--chrome); stroke: var(--roo-line); stroke-width: 1.6; }
+.car .eye-white { fill: #fff; stroke: #121314; stroke-width: .9; }
+.car .lid { fill: var(--chrome); }
+.car .mark { stroke: #121314; stroke-width: 1; }
+.car .tire { fill: #121314; stroke: var(--roo-line); stroke-width: 1.2; }
+.car .hub { fill: var(--signal); stroke: #121314; stroke-width: 1.1; }
+.car .antenna { fill: none; stroke: var(--signal); stroke-width: 2.4; stroke-linecap: round; }
+.car .fx-speed path { fill: none; stroke: var(--roo-line); stroke-width: 1.6; stroke-linecap: round; }
+
+/* the speech bubble: a white panel with the thick outline, tail pointing at Roo */
+.roo-say { position: relative; margin: 0; padding: 10px 14px; max-width: 30ch; min-height: 1.5em; background: var(--card);
+  border: 2.5px solid var(--outline); border-radius: 14px; font: 600 15px/1.4 var(--sans); color: var(--ink); }
+.roo-say::before { content: ""; position: absolute; left: -11px; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  background: var(--card); border-left: 2.5px solid var(--outline); border-bottom: 2.5px solid var(--outline);
+  transform: rotate(45deg) skew(12deg, 12deg); }
+.roo-say:empty { display: none; }
+
+/* ---------- the eye parts ---------- */
+.roo-face .pupil { fill: #121314; transform-box: fill-box; transform-origin: center;
+  transform: translate(calc((var(--px, 0) + var(--fx, 0)) * var(--u) * 1px), calc((var(--py, 0) + var(--fy, 0)) * var(--u) * 1px)) scale(var(--ps, 1));
+  transition: transform .25s var(--ease); }
+.roo-face .shine { fill: #fff; }
+.roo-face .lid-w { transform-box: fill-box; transform-origin: center; transition: transform .25s var(--ease); }
+.roo-face .eye-l .lid-w { transform: rotate(var(--tl, 0deg)); }
+.roo-face .eye-r .lid-w { transform: rotate(var(--tr, 0deg)); }
+.roo-face .lid { transform-box: fill-box; transform-origin: top; transform: scaleY(var(--lid, 0)); transition: transform .2s var(--ease); }
+.blink .roo-face .lid { transform: scaleY(1); transition-duration: .07s; }
+.roo-face .mark { fill: none; stroke-linecap: round; opacity: 0; transition: opacity .15s; }
+.roo-face .antenna { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .3s var(--ease); }
+.roo-face [class^="fx-"] { opacity: 0; transition: opacity .2s; }
+.car .fx-tear, .car .fx-drop { fill: #e6f0f8; stroke: #121314; stroke-width: .6; }
+.car .fx-bang { font: italic 700 13px/1 var(--display); fill: var(--stop); stroke: #121314; stroke-width: .5; }
+.car .fx-zzz text { font: italic 700 6px/1 var(--display); fill: var(--muted); }
+.car .fx-bolt { fill: var(--signal); stroke: #121314; stroke-width: .7; stroke-linejoin: round; }
+.car .fx-dots circle { fill: var(--muted); }
+.car .fx-confetti rect:nth-child(odd) { fill: var(--signal); }
+.car .fx-confetti rect:nth-child(even) { fill: var(--roo-line); }
+.roo-face .bob, .roo-face .wheel { transform-box: view-box; }
+
+/* ---------- the moods ---------- */
+/* happy: smiling closed eyes now and then, otherwise open and looking at you; a slow breath */
+[data-mood="happy"] { --lid: .08; }
+[data-mood="happy"] .bob { animation: breathe 2.6s ease-in-out infinite; }
+
+/* proud: ^ ^ eyes, one hop, confetti, antenna wiggle */
+[data-mood="proud"] { --lid: 1; }
+[data-mood="proud"] .happy { opacity: 1; }
+[data-mood="proud"] .enter.car { animation: hop .5s var(--ease) 2; }
+[data-mood="proud"] .fx-confetti { opacity: 1; }
+[data-mood="proud"] .enter .fx-confetti { animation: confetti 1.1s ease-out both; }
+[data-mood="proud"] .antenna { animation: wiggle .5s ease-in-out 3; }
+
+/* driving: focused, looking ahead, speed lines, a quick bob */
+[data-mood="driving"] { --lid: .3; --tl: 10deg; --tr: -10deg; --px: 3; --py: .4; }
+[data-mood="driving"] .fx-speed { opacity: 1; animation: speed .5s linear infinite; }
+[data-mood="driving"] .bob { animation: bump .45s ease-in-out infinite; }
+
+/* worried: worried lids, eyes darting, a sweat drop */
+[data-mood="worried"] { --lid: .18; --tl: -14deg; --tr: 14deg; }
+[data-mood="worried"] .pupil { animation: dart 1.6s ease-in-out infinite; }
+[data-mood="worried"] .fx-drop { opacity: 1; animation: drip 1.6s ease-in infinite; }
+
+/* sad: heavy, slanted lids, looking down, a tear, antenna drooping */
+[data-mood="sad"] { --lid: .45; --tl: -22deg; --tr: 22deg; --py: 3; --px: -.5; }
+[data-mood="sad"] .fx-tear { opacity: 1; animation: drip 2.2s ease-in infinite; }
+[data-mood="sad"] .antenna { transform: scaleY(.5); }
+
+/* shocked: wide eyes, tiny pupils, "!" and a shake */
+[data-mood="shocked"] { --lid: 0; --ps: .6; }
+[data-mood="shocked"] .fx-bang { opacity: 1; }
+[data-mood="shocked"] .enter.roo-face { animation: shake .45s ease-in-out 2; }
+[data-mood="shocked"] .antenna { transform: scaleY(1.25); }
+
+/* sleepy: half-closed eyes that keep drooping, slow sway */
+[data-mood="sleepy"] { --lid: .6; --py: 2; }
+[data-mood="sleepy"] .lid { animation: droop 3s ease-in-out infinite; }
+[data-mood="sleepy"] .antenna { transform: scaleY(.7); }
+
+/* charging: content closed eyes and a pulsing bolt */
+[data-mood="charging"] { --lid: 1; }
+[data-mood="charging"] .happy { opacity: 1; }
+[data-mood="charging"] .fx-bolt { opacity: 1; animation: pulse 1.2s ease-in-out infinite; }
+
+/* asleep (offline): eyes shut, Zzz, colors turned down */
+[data-mood="asleep"] { --lid: 1; }
+[data-mood="asleep"] .shut { opacity: 1; }
+[data-mood="asleep"] .fx-zzz { opacity: 1; }
+[data-mood="asleep"] .fx-zzz text { animation: float 2.4s ease-in-out infinite; }
+[data-mood="asleep"] .fx-zzz text:nth-child(2) { animation-delay: .4s; }
+[data-mood="asleep"] .fx-zzz text:nth-child(3) { animation-delay: .8s; }
+[data-mood="asleep"] .car { filter: saturate(.25); }
+[data-mood="asleep"] .antenna { transform: scaleY(.45); }
+
+/* thinking: looking up, "…" */
+[data-mood="thinking"] { --lid: .12; --px: -1.5; --py: -3; }
+[data-mood="thinking"] .fx-dots { opacity: 1; }
+[data-mood="thinking"] .fx-dots circle { animation: blinkdot 1.2s ease-in-out infinite; }
+[data-mood="thinking"] .fx-dots circle:nth-child(2) { animation-delay: .2s; }
+[data-mood="thinking"] .fx-dots circle:nth-child(3) { animation-delay: .4s; }
+
+/* curious: wide open, following the pointer, a small tilt */
+[data-mood="curious"] { --lid: 0; --ps: 1.12; }
+[data-mood="curious"] .bob { transform: rotate(-3deg); transform-origin: 20px 20px; transition: transform .3s var(--ease); }
+
+/* ---------- touch and life: short actions on top of the mood (data-act) ---------- */
+.roo-body { display: inline-block; flex: none; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  outline-offset: 6px; border-radius: 14px;
+  transform: translateX(var(--dx, 0px)) rotate(var(--lean, 0deg)); transform-origin: 40% 90%;
+  transition: transform .55s cubic-bezier(.3, 1.6, .5, 1); }
+.roo-body.dragging { cursor: grabbing; transition: transform .05s linear; }
+.roo-body:hover .car { filter: drop-shadow(0 3px 0 var(--signal)); }
+.roo-logo { cursor: pointer; }
+.car .fx-hearts path { fill: #e8604f; stroke: #121314; stroke-width: .5; }
+.car .fx-stars path { fill: var(--signal); stroke: #121314; stroke-width: .4; }
+.car .fx-note { font: 700 8px/1 var(--sans); fill: var(--roo-line); }
+
+/* boop: a quick happy squint and a bounce */
+[data-act="boop"], [data-act="hello"] { --lid: 1; }
+[data-act="boop"] .happy, [data-act="giggle"] .happy, [data-act="wake"] .happy, [data-act="drop"] .happy { opacity: 1; }
+[data-act="boop"] .acting.car { animation: squash .45s var(--ease); }
+[data-act="boop"] .antenna { animation: wiggle .3s ease-in-out 2; }
+/* giggle / tickle: happy eyes, wiggling and stars */
+[data-act="giggle"], [data-act="tickle"] { --lid: 1; }
+[data-act="tickle"] .happy { opacity: 1; }
+[data-act="giggle"] .acting.car, [data-act="tickle"] .acting.car { animation: giggle .18s ease-in-out 6; }
+[data-act="giggle"] .fx-stars, [data-act="tickle"] .fx-stars { opacity: 1; animation: pulse .5s ease-in-out infinite; }
+/* dizzy: eyes going round, a wobble and stars */
+[data-act="dizzy"] { --lid: 0; --ps: .8; }
+[data-act="dizzy"] .pupil { animation: orbit .5s linear infinite; }
+[data-act="dizzy"] .eye-r .pupil { animation-direction: reverse; }
+[data-act="dizzy"] .acting.car { animation: wobble 1.1s ease-in-out 2; }
+[data-act="dizzy"] .fx-stars { opacity: 1; animation: spin 1.4s linear infinite; }
+/* rev (holding Roo): focused eyes, engine shaking, speed lines */
+[data-act="rev"] { --lid: .4; --tl: 14deg; --tr: -14deg; --px: 3; }
+[data-act="rev"] .car { animation: rumble .08s linear infinite; }
+[data-act="rev"] .fx-speed { opacity: 1; animation: speed .2s linear infinite; }
+[data-act="rev"] .antenna { transform: rotate(-18deg) scaleY(.85); }
+/* dash (let go after holding): zoom off to the right and come back */
+[data-act="dash"] { --lid: .3; --px: 3.5; }
+[data-act="dash"] .acting.car { animation: dash 1s cubic-bezier(.5, 0, .3, 1); }
+[data-act="dash"] .fx-speed { opacity: 1; }
+/* ride / back (dragging): looking where it goes, wheels bouncing */
+[data-act="ride"] { --lid: 0; --ps: 1.15; --px: 3.5; }
+[data-act="back"] { --lid: .1; --px: -3.5; --tl: -10deg; --tr: 10deg; }
+[data-act="ride"] .happy { opacity: 0; }
+[data-act="ride"] .bob, [data-act="back"] .bob { animation: bump .25s ease-in-out infinite; }
+[data-act="ride"] .fx-speed { opacity: 1; animation: speed .3s linear infinite; }
+[data-act="ride"] .antenna { transform: rotate(-14deg); }
+[data-act="back"] .antenna { transform: rotate(14deg); }
+/* drop (let go after dragging): a happy landing */
+[data-act="drop"] { --lid: 1; }
+[data-act="drop"] .acting.car { animation: squash .5s var(--ease) .15s; }
+/* wake: eyes pop open, a jump */
+[data-act="wake"] { --lid: 1; }
+[data-act="wake"] .acting.car { animation: hop .45s var(--ease); }
+/* the serious moods only blink back */
+[data-act="blinkonce"] .lid { animation: blinkonce .5s ease-in-out; }
+/* fidgets when calm */
+[data-act="lookaround"] { --lid: .05; }
+[data-act="lookaround"] .pupil { animation: lookaround 2.2s ease-in-out; }
+[data-act="lookaround"] .antenna { animation: wiggle .6s ease-in-out 2; }
+[data-act="wiggle"] .antenna { animation: wiggle .3s ease-in-out 4; }
+[data-act="hum"] { --lid: 1; }
+[data-act="hum"] .happy { opacity: 1; }
+[data-act="hum"] .bob { animation: sway .5s ease-in-out 4; }
+[data-act="hum"] .fx-note { opacity: 1; animation: float 1s ease-out 2; }
+[data-act="hopsmall"] .acting.car { animation: squash .6s var(--ease); }
+[data-act="stretch"] .acting.car { animation: stretch 1.4s ease-in-out; }
+[data-act="stretch"] { --lid: .55; --py: -2; }
+/* bored, then a nap when nobody is around */
+[data-act="yawn"] .lid { animation: yawn 2.6s ease-in-out; }
+[data-act="yawn"] .antenna { transform: scaleY(.7); }
+[data-act="nap"] { --lid: 1; }
+[data-act="nap"] .shut, [data-act="nap"] .fx-zzz { opacity: 1; }
+[data-act="nap"] .fx-zzz text { animation: float 2.4s ease-in-out infinite; }
+[data-act="nap"] .fx-zzz text:nth-child(2) { animation-delay: .4s; }
+[data-act="nap"] .fx-zzz text:nth-child(3) { animation-delay: .8s; }
+[data-act="nap"] .bob { animation: breathe 3.5s ease-in-out infinite; }
+[data-act="nap"] .antenna { transform: scaleY(.5); }
+/* love (thanks, for example after a refill): hearts */
+[data-act="love"] { --lid: 1; }
+[data-act="love"] .happy { opacity: 1; }
+[data-act="love"] .fx-hearts { opacity: 1; animation: float 1.6s ease-out 1 both; }
+[data-act="love"] .acting.car { animation: squash .5s var(--ease); }
+/* the logo: wide eyes on hover, a wink on click */
+[data-act="wide"] { --lid: 0; --ps: 1.18; }
+[data-act="wink"] .eye-r .lid { transform: scaleY(1); }
+[data-act="wink"] .eye-r .happy { opacity: 1; }
+[data-act="wink"] .antenna { animation: wiggle .3s ease-in-out 2; }
+/* an action hides the mood's own effects so they don't pile up */
+[data-act] [class^="fx-"]:not(.fx-speed):not(.fx-stars):not(.fx-hearts):not(.fx-zzz):not(.fx-note) { opacity: 0; }
+[data-act]:not([data-act="nap"]) .fx-zzz { opacity: 0; }
+
+/* ---------- motion ---------- */
+@keyframes squash { 0% { transform: none; } 25% { transform: translateY(2%) scale(1.06, .92); } 55% { transform: translateY(-12%) scale(.96, 1.05); } 80% { transform: translateY(0) scale(1.03, .97); } 100% { transform: none; } }
+@keyframes giggle { 50% { transform: rotate(-3deg) translateY(-2%); } }
+@keyframes wobble { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+@keyframes orbit { from { transform: rotate(0deg) translateX(calc(2.2 * var(--u) * 1px)) rotate(0deg); } to { transform: rotate(360deg) translateX(calc(2.2 * var(--u) * 1px)) rotate(-360deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rumble { 25% { transform: translate(.6%, -.6%); } 75% { transform: translate(-.6%, .4%); } }
+@keyframes dash { 0% { transform: none; } 15% { transform: translateX(-6%) scaleX(.96); } 45% { transform: translateX(130%) skewX(-10deg); opacity: 0; }
+  55% { transform: translateX(-130%); opacity: 0; } 85% { transform: translateX(4%) skewX(6deg); opacity: 1; } 100% { transform: none; } }
+@keyframes blinkonce { 50% { transform: scaleY(1); } }
+@keyframes lookaround { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(calc(-3 * var(--u) * 1px), calc(-1 * var(--u) * 1px)); }
+  60% { transform: translate(calc(3 * var(--u) * 1px), calc(-1 * var(--u) * 1px)); } }
+@keyframes sway { 50% { transform: rotate(-3deg); } }
+@keyframes stretch { 40% { transform: scale(1.05, .9) translateY(4%); } 70% { transform: scale(.97, 1.06) translateY(-4%); } }
+@keyframes yawn { 0%, 100% { transform: scaleY(.1); } 40%, 70% { transform: scaleY(.85); } }
+.fx-stars, .fx-hearts, .fx-note { transform-box: fill-box; transform-origin: center; }
+.pupil { transform-box: fill-box; }
+@keyframes breathe { 50% { transform: translateY(-.5px); } }
+@keyframes bump { 50% { transform: translateY(-.7px); } }
+@keyframes hop { 40% { transform: translateY(-10%) rotate(-4deg); } 75% { transform: none; } }
+@keyframes wiggle { 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+@keyframes speed { from { transform: translateX(2px); opacity: .5; } to { transform: translateX(-2px); opacity: 1; } }
+@keyframes dart { 0%, 100% { transform: translate(calc(-2.5 * var(--u) * 1px), 0); } 45%, 55% { transform: translate(calc(2.5 * var(--u) * 1px), 0); } }
+@keyframes drip { 0% { transform: translateY(-1px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(3px); opacity: 0; } }
+@keyframes shake { 20%, 60% { transform: translateX(-2%); } 40%, 80% { transform: translateX(2%); } }
+@keyframes droop { 50% { transform: scaleY(.82); } }
+@keyframes pulse { 50% { transform: scale(1.15); opacity: .7; } }
+@keyframes float { 0% { transform: translateY(1px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-3px); opacity: 0; } }
+@keyframes blinkdot { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes confetti { 0% { transform: translateY(10px) scale(.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-4px) rotate(30deg); opacity: 0; } }
+.fx-confetti, .fx-bolt { transform-box: fill-box; transform-origin: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .roo-face *, .roo-face { animation: none !important; transition: none !important; }
+}

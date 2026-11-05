@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="roo.css">
   <style>
     .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
     header.top { display: flex; align-items: center; gap: 16px; padding: 14px 0; }
@@ -18,7 +19,8 @@
     header.top nav a:hover { background: var(--line); color: var(--ink); }
     .intro { display: grid; grid-template-columns: 1.3fr 1fr; gap: 28px; align-items: center; padding: 40px 0 28px; }
     .intro h1 { font: italic 700 84px/1 var(--display); margin: 16px 0 12px; }
-    .intro h1 .roo { display: inline-block; margin-left: 4px; padding: 0 14px 0 8px; background: #121314; color: var(--signal); transform: skewX(var(--skew)); border-radius: 6px; }
+    .intro h1 { margin: 10px 0 8px; } .intro h1 .roo-logo { --size: 76px; }
+    .stage .roo-buddy { --roo-w: 300px; flex-direction: column; }
     .intro p { font-size: 18px; color: var(--ink-2); max-width: 46ch; margin: 0 0 18px; }
     .intro .stage { background: var(--mat-bg); border: var(--stroke) solid var(--outline); box-shadow: var(--kerb); border-radius: var(--radius-lg); aspect-ratio: 4 / 3;
       background-image: radial-gradient(var(--mat-dots) 1px, transparent 1.2px); background-size: 18px 18px; display: grid; place-items: center; }
@@ -86,13 +88,10 @@
   <div class="finish" aria-hidden="true"></div>
   <div class="wrap">
     <header class="top">
-      <a class="brand" href="#">
-        <img class="brand-mark" src="logo/carkaroo-mark.svg" alt="">
-        <span class="brand-name">Carka<span class="roo">roo</span></span>
-      </a>
+      <a class="brand" href="#"><span id="logo-top" style="--size:30px"></span></a>
       <nav aria-label="Sections">
         <a href="#logo">Logo</a><a href="#color">Color</a><a href="#type">Type</a><a href="#shape">Shape</a>
-        <a href="#components">Components</a><a href="#map">Map & 3D</a><a href="#slides">Slides</a><a href="#rules">Rules</a>
+        <a href="roo-moods.html">Roo's moods</a><a href="#components">Components</a><a href="#map">Map & 3D</a><a href="#slides">Slides</a><a href="#rules">Rules</a>
       </nav>
       <button class="ghost small theme-btn" id="theme" type="button">Dark</button>
     </header>
@@ -100,7 +99,7 @@
     <section class="intro">
       <div>
         <span class="eyebrow">Design system</span>
-        <h1>Carka<span class="roo">roo</span></h1>
+        <h1><span id="logo-big"></span></h1>
         <p><b>Car + kangaroo.</b> A kangaroo carries what matters in its pouch; Roo, our AI delivery car, carries boxes to the
           stations before they run out. The theme is <b>Night Race</b>: the monochrome racing look of our poster and portfolio
           (asphalt, chrome, fog, checkered flags, slanted banners) with one signal color, the yellow of Roo's motors.</p>
@@ -108,16 +107,17 @@
           <a class="button" href="README.md">Read the brand book</a>
           <a class="button ghost" href="tokens.json">tokens.json</a>
           <a class="button ghost" href="carkaroo.js">carkaroo.js (3D)</a>
+          <a class="button ghost" href="roo-moods.html">Roo's moods</a>
         </div>
       </div>
-      <div class="stage"><img src="logo/carkaroo-mark.svg" alt="Roo, the Carkaroo car" style="width:70%"></div>
+      <div class="stage"><div id="roo-hello"></div></div>
     </section>
 
     <section class="block" id="logo">
       <h2>Logo</h2>
-      <p class="lead">"Carka" in ink, "roo" in yellow on a slanted asphalt plate, set in Barlow Condensed Bold Italic. Leave one wheel of space around it. Never recolor or stretch Roo.</p>
+      <p class="lead">"Carkar" in Barlow Condensed Bold Italic, then Roo's two eyes as the "oo", the yellow antenna over them and a yellow line under the word, like on the poster. On the website the eyes are alive: they blink, look at the pointer and show Roo's mood (see <a href="roo-moods.html">Roo's moods</a>). Leave one eye of space around it. Never recolor or stretch it.</p>
       <div class="logos">
-        <figure><img src="logo/carkaroo-logo.svg" alt="Carkaroo logo"><figcaption>Main logo, light backgrounds · <a href="logo/carkaroo-logo.svg" download>SVG</a></figcaption></figure>
+        <figure style="background:#ffffff;color:#4a4e53"><img src="logo/carkaroo-logo.svg" alt="Carkaroo logo"><figcaption>Main logo, light backgrounds · <a href="logo/carkaroo-logo.svg" download>SVG</a></figcaption></figure>
         <figure class="darkbg"><img src="logo/carkaroo-logo-dark.svg" alt="Carkaroo logo, dark"><figcaption>Dark backgrounds · <a href="logo/carkaroo-logo-dark.svg" download style="color:#b4b8ad">SVG</a></figcaption></figure>
         <figure><img src="logo/roo-top.svg" alt="Roo from above"><figcaption>Roo from above: maps, 3D reference · <a href="logo/roo-top.svg" download>SVG</a></figcaption></figure>
       </div>
@@ -282,6 +282,7 @@ const route = new THREE.MeshBasicMaterial(K.three.route);</pre>
     <footer class="foot"><img src="logo/carkaroo-mark.svg" alt="" style="width:26px"> Carkaroo design system · source files in <code>design/</code></footer>
   </div>
 
+  <script src="roo.js"></script>
   <script>
     // swatches read the live CSS variables, so they always match tokens.css
     const groups = {
@@ -308,8 +309,17 @@ const route = new THREE.MeshBasicMaterial(K.three.route);</pre>
     const darkNow = () => document.documentElement.dataset.theme === "dark"
       || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
     function label() { btn.textContent = darkNow() ? "Light" : "Dark"; }
-    btn.addEventListener("click", () => { document.documentElement.dataset.theme = darkNow() ? "light" : "dark"; label(); paint(); });
+    try { const t = localStorage.getItem("carkaroo-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    btn.addEventListener("click", () => {
+      document.documentElement.dataset.theme = darkNow() ? "light" : "dark";
+      try { localStorage.setItem("carkaroo-theme", document.documentElement.dataset.theme); } catch (e) {}
+      label(); paint();
+    });
     label(); paint();
+    // the live logo and Roo (roo.js)
+    Roo.logo(document.getElementById("logo-top"));
+    Roo.logo(document.getElementById("logo-big"));
+    Roo.buddy(document.getElementById("roo-hello"), { say: "Hi, I'm Roo! Tap me, hold me or drag me." });
   </script>
 </body>
 </html>
