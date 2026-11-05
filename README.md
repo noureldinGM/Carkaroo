@@ -118,20 +118,26 @@ Other things to try:
 
 ## Project layout
 
+New to the project? Start with [CONTRIBUTING.md](CONTRIBUTING.md): where everything is and how to work on it.
+
 ```
-config/            factory track (nodes, lines) and materials/stations/car settings
-agv_brain/         the AI: map, forecaster, need detector, safety, simulator,
-                   random layouts, optimizer, features, ML ranker, explainer, dispatcher,
-                   controller, message bus, simulated car and stations
-agv_brain/dashboard/  the live dashboard (web page served by the AI)
-scripts/           demo, dataset generation, training, evaluation, sensitivity
-models/            trained ranker
-data/sample/       sample of the training dataset (the full one is regenerated)
-reports/           evaluation report and charts
-docs/              architecture, project plan, protocol, requirements,
-                   dataset, ML rubric, calibration
-firmware/          car firmware notes (BW20-12F-Kit), to be written in Phase 3
-tests/             pytest suite
+agv_brain/            the AI: map, forecaster, need detector, safety, simulator,
+                      random and real layouts, optimizer, features, ML ranker, explainer,
+                      dispatcher, controller, message bus, broker, simulated car and stations
+agv_brain/dashboard/  the website (server.py + static/ pages, served by the AI)
+config/               factory track, materials/stations/car settings, MQTT settings
+                      (*.local.yaml = device keys and saved mode: secret, never in git)
+scripts/              run_app (everything), demo, dataset, training, evaluation, broker tools
+models/               trained ranker
+data/sample/          sample of the training dataset (the full one is regenerated)
+data/external/        the 30 real KIT factory layouts (CC BY 4.0, see its README)
+design/               Carkaroo design system: tokens, logos, Roo, style guide;
+                      design/print/ = poster and portfolio drafts (kept by the team)
+reports/              evaluation reports and charts
+docs/                 architecture, plan, protocol, requirements, dataset, ML rubric,
+                      calibration, dashboard, security
+firmware/             car firmware notes (BW20-12F-Kit), to be written in Phase 3
+tests/                pytest suite (MQTT tests skip when no broker is running)
 ```
 
 ## Hardware
@@ -161,4 +167,6 @@ This needs Mosquitto (`winget install --id EclipseFoundation.Mosquitto -e`). Its
 - [Measurable design requirements](docs/design-requirements.md)
 - [Dataset](docs/dataset.md) and [ML rubric](docs/ml-rubric.md)
 - [Sensor calibration](docs/calibration.md)
+- [Security](docs/security.md): how the website and the broker are protected
+- [Working on the project](CONTRIBUTING.md): where things are, branches, tests
 - [Firmware notes](firmware/README.md)
