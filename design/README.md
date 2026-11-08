@@ -59,7 +59,7 @@ Taglines (one per piece):
 
 ### Roo, the main character
 
-Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, the logo's eyes and Roo on the Map page show it, and Roo says one short line:
+Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, the logo's eyes and Roo in the corner of every page show it (Roo rolls along when you change page, and takes a lap across the screen with a box from the checkered-flag button), and Roo says one short line:
 
 | Mood | When |
 | --- | --- |

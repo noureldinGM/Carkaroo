@@ -412,3 +412,52 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
   .fe-nums { grid-template-columns: 1fr 1fr; }
   .fe-sts { grid-template-columns: 1fr; }
 }
+
+/* ---------- Roo in the corner of every page ---------- */
+body { padding-bottom: 96px; }               /* room for Roo under the last card */
+.roo-dock { position: fixed; right: 18px; bottom: 12px; z-index: 30; display: flex; align-items: flex-end; gap: 6px;
+  pointer-events: none; }
+.roo-dock > * { pointer-events: auto; }
+.roo-ride { position: relative; }
+.roo-dock .roo-buddy { --roo-w: 108px; flex-direction: row-reverse; gap: 10px; }
+.roo-dock .roo-say { font-size: 13px; max-width: 28ch; padding: 8px 12px; }
+.roo-dock .roo-say::before { left: auto; right: -11px; transform: rotate(-135deg) skew(12deg, 12deg); }
+.roo-lap-btn { width: 34px; height: 34px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 17px;
+  background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line-2); margin-bottom: 4px; }
+.roo-lap-btn:hover { box-shadow: inset 0 0 0 2px var(--ink); filter: none; }
+body.booting .roo-dock, body.logged-out .roo-dock { display: none; }
+/* the box Roo carries on its lap */
+.roo-cargo { position: absolute; right: 30px; bottom: 58px; display: none; }
+.roo-dock.lapping .roo-cargo { display: inline-grid; animation: cargo-on .5s var(--ease) both; }
+.roo-dock.lapping .roo-say, .roo-dock.lapping .roo-lap-btn { visibility: hidden; }
+.roo-dock.lapping .fx-speed { opacity: 1; }
+.roo-dock.lapping .wheel { animation: bump .18s linear infinite; }
+/* off the right edge, then in from the left, across the whole screen, back to its spot */
+.roo-dock.lapping { animation: roo-lap 3.6s cubic-bezier(.45, 0, .35, 1) both; }
+@keyframes roo-lap {
+  0% { transform: none; }
+  10% { transform: translateX(-14px); }
+  30% { transform: translateX(calc(100% + 40px)); }
+  30.01% { transform: translateX(calc(-100vw + 100% - 40px)); }
+  92% { transform: translateX(8px); }
+  100% { transform: none; }
+}
+@keyframes cargo-on { 0% { transform: translateY(-40px) scale(.4); opacity: 0; } 60% { transform: translateY(4px) scale(1.05); opacity: 1; } 100% { transform: none; } }
+/* changing page: a short roll and a little bounce */
+.roo-dock.roll { animation: roo-roll .6s var(--ease); }
+@keyframes roo-roll { 0% { transform: none; } 35% { transform: translateX(-26px); } 70% { transform: translateX(4px) translateY(-3px); } 100% { transform: none; } }
+@media (max-width: 600px) {
+  .roo-dock { right: 10px; bottom: 8px; }
+  .roo-dock .roo-buddy { --roo-w: 78px; }
+  .roo-dock .roo-say { max-width: 20ch; font-size: 12px; }
+  .roo-cargo { right: 20px; bottom: 42px; }
+  body { padding-bottom: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roo-dock.lapping, .roo-dock.roll, .roo-dock.lapping .roo-cargo, .roo-dock.lapping .wheel { animation: none; }
+}
+@media (max-width: 600px) {
+  .status { flex-wrap: wrap; white-space: normal; gap: 8px; row-gap: 6px; }
+  .factory-chip { max-width: 100%; }
+  .factory-chip b { max-width: 150px; }
+}
