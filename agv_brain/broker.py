@@ -50,6 +50,71 @@ def port_free(port: int) -> bool:
             return False
 
 
+def port_in_use(port: int, host: str = "127.0.0.1") -> bool:
+    """True if something already answers on this port. (The website's server may share a
+    port on Windows, so trying to bind is not enough: try to connect instead.)"""
+    with socket.socket() as s:
+        s.settimeout(0.5)
+        return s.connect_ex((host, port)) == 0
+
+
+# -- leftovers from an earlier run -------------------------------------------------
+# The app starts Mosquitto as a child. If the app is killed instead of stopped with Ctrl+C,
+# that broker keeps running on its own and holds the port, so the next start gets no broker.
+
+def _processes() -> list[dict]:
+    """Running processes as {pid, ppid, cmd}. Empty if they cannot be listed."""
+    try:
+        if os.name == "nt":
+            ps = ("Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CommandLine"
+                  " | ConvertTo-Json -Compress")
+            out = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps],
+                                 capture_output=True, text=True, timeout=20).stdout
+            rows = yaml.safe_load(out) or []         # JSON is valid YAML
+            rows = rows if isinstance(rows, list) else [rows]
+            return [{"pid": r["ProcessId"], "ppid": r["ParentProcessId"], "cmd": r.get("CommandLine") or ""}
+                    for r in rows]
+        out = subprocess.run(["ps", "-eo", "pid=,ppid=,args="], capture_output=True, text=True, timeout=10).stdout
+        procs = []
+        for line in out.splitlines():
+            parts = line.split(None, 2)
+            if len(parts) >= 2:
+                procs.append({"pid": int(parts[0]), "ppid": int(parts[1]), "cmd": parts[2] if len(parts) > 2 else ""})
+        return procs
+    except (OSError, subprocess.SubprocessError, yaml.YAMLError, KeyError, TypeError, ValueError):
+        return []
+
+
+def is_carkaroo_app(cmd: str) -> bool:
+    """A Carkaroo program that starts its own broker (the website app or a dev script)."""
+    return "python" in cmd.lower() and ("run_app.py" in cmd or "agv_brain" in cmd)
+
+
+def our_brokers(folder: Path, procs: list[dict] | None = None) -> tuple[list[int], list[int]]:
+    """The Mosquitto processes started by a Carkaroo app with the config in `folder`:
+    (orphans whose app is gone, brokers whose app still runs)."""
+    procs = _processes() if procs is None else procs
+    by_pid = {p["pid"]: p for p in procs}
+    conf = str(folder / "mosquitto.conf").lower()
+    orphans, owned = [], []
+    for p in procs:
+        if "mosquitto" not in p["cmd"].lower() or conf not in p["cmd"].lower():
+            continue
+        parent = by_pid.get(p["ppid"])
+        (owned if parent and is_carkaroo_app(parent["cmd"]) else orphans).append(p["pid"])
+    return orphans, owned
+
+
+def stop_process(pid: int) -> None:
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True)
+    else:
+        try:
+            os.kill(pid, 15)
+        except OSError:
+            pass
+
+
 def lan_addresses() -> list[str]:
     try:
         return [a for a in socket.gethostbyname_ex(socket.gethostname())[2] if not a.startswith("127.")]
@@ -136,8 +201,10 @@ def build_config(port: int, cloud: dict, folder: Path, secure: bool = True) -> t
     return "\n".join(lines) + "\n", bridged
 
 
-def default_folder() -> Path:
-    folder = Path(tempfile.gettempdir()) / "capstone-mosquitto"
+def default_folder(port: int = 1883) -> Path:
+    """One folder per broker port, so two apps on different ports never share (or overwrite)
+    each other's files, and a leftover broker can be told apart by its config path."""
+    folder = Path(tempfile.gettempdir()) / ("capstone-mosquitto" if port == 1883 else f"capstone-mosquitto-{port}")
     folder.mkdir(exist_ok=True)
     return folder
 
@@ -153,11 +220,12 @@ class Broker:
         self.port, self.cloud = port, cloud
         self.car_ids, self.stations = car_ids, stations
         self.keys_file = keys_file
-        self.folder = folder or default_folder()
+        self.folder = folder or default_folder(port)
         self.keys = load_keys([*car_ids, *stations], keys_file)
         self.proc: subprocess.Popen | None = None
         self.bridged = False
         self.error: str | None = None
+        self.cleared: list[int] = []      # leftover brokers from an earlier run that start() stopped
 
     @property
     def devices(self) -> list[str]:
@@ -196,11 +264,26 @@ class Broker:
             self.error = ("Mosquitto is not installed. Install it with: "
                           "winget install --id EclipseFoundation.Mosquitto -e")
             return False
+        owned: list[int] = []
         if not port_free(self.port):
-            self.error = (f"Port {self.port} is already used, probably by the Mosquitto Windows service, which "
-                          "only listens on this laptop. In an administrator PowerShell run "
-                          "'Stop-Service mosquitto' and 'Set-Service mosquitto -StartupType Manual', "
-                          "then start the app again.")
+            # a broker left over from an earlier run (its app is gone): stop it and take the port
+            orphans, owned = our_brokers(self.folder)
+            for pid in orphans:
+                stop_process(pid)
+            end = time.monotonic() + 3
+            while orphans and not port_free(self.port) and time.monotonic() < end:
+                time.sleep(0.1)
+            if orphans and port_free(self.port):
+                self.cleared = orphans
+        if not port_free(self.port):
+            if owned:
+                self.error = (f"Port {self.port} is used by another copy of the Carkaroo app that is still running. "
+                              "Use that one, or stop it with Ctrl+C in its window, then start the app again.")
+            else:
+                self.error = (f"Port {self.port} is already used, probably by the Mosquitto Windows service, which "
+                              "only listens on this laptop. In an administrator PowerShell run "
+                              "'Stop-Service mosquitto' and 'Set-Service mosquitto -StartupType Manual', "
+                              "then start the app again.")
             return False
         try:
             self._write_files()

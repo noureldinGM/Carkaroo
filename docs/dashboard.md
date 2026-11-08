@@ -19,6 +19,8 @@ Set-Service mosquitto -StartupType Manual
 ```
 Until then the factory cannot start (the car and the stations have nothing to log in to), and the Setup page says why. (`--mqtt-port 1884` uses another port instead; the firmware must then use it too.) The first time, allow Mosquitto through the Windows firewall on private networks.
 
+Run one copy at a time and stop it with **Ctrl+C**. If a copy is already running, a new start says so and stops (open the one that runs). If an earlier copy was closed without Ctrl+C, the broker it started keeps running on its own; the next start finds it and stops it ("Stopped a broker left over from an earlier run"). Each broker port has its own folder in the temp folder (`capstone-mosquitto`, or `capstone-mosquitto-<port>` with `--mqtt-port`).
+
 For developers, a quick simulation without any broker or login: `run_factory_sim.py` (`--speed 5`, `--policy fifo`, `--compare 40`). It is not the website.
 
 The website refuses commands sent by other web pages and only accepts setup changes from the laptop itself; see [security.md](security.md).
