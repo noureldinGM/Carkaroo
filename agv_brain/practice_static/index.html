@@ -33,42 +33,46 @@
       to it (<span class="mono">http://localhost:8050</span>) and watch each device turn green there.</p>
     <div id="note"></div>
 
-    <div class="grid">
-      <section class="ctl" aria-labelledby="t-factory">
-        <h3 id="t-factory"><span class="step">1</span> The factory floor</h3>
-        <p>Which factory to pretend: its track and its stations, as you built them on the Carkaroo website.</p>
-        <div class="row"><select id="factory" aria-label="Factory"></select><button id="choose" type="button">Use it</button></div>
-      </section>
-
-      <section class="ctl" aria-labelledby="t-connect">
-        <h3 id="t-connect"><span class="step">2</span> Connect</h3>
-        <p>On the Carkaroo website: <b>Setup → Devices → Copy all for the simulator</b>. Paste it here. Or type each key
-          below, like you will in the firmware.</p>
-        <textarea id="paste" rows="4" placeholder="broker: localhost&#10;port: 1883&#10;AGV-1: …&#10;S1: …" aria-label="Pasted keys"></textarea>
-        <div class="row"><button id="connect-all" class="go" type="button">Connect all</button>
-          <label class="inline">Broker <input id="host" value="localhost" maxlength="100" aria-label="Broker address"></label>
-          <label class="inline">Port <input id="port" type="number" value="1883" min="1" max="65535" aria-label="Broker port"></label></div>
-      </section>
-    </div>
-
-    <section class="ctl" aria-labelledby="t-devices">
-      <h3 id="t-devices"><span class="step">3</span> The pretend devices</h3>
-      <p>Each one logs in with its own ID and key. A wrong key is refused, like on the real car.
-        <b>Disconnect</b> is like pulling its plug.</p>
-      <ul id="devices" class="devices"></ul>
-    </section>
-
-    <div class="grid">
-      <section class="ctl" aria-labelledby="t-play">
-        <h3 id="t-play">Play</h3>
-        <p>These change the pretend world, not the AI. Watch the Carkaroo website react.</p>
-        <div id="play"></div>
-      </section>
+    <!-- 1 and 2: choose the factory and paste the keys. Folds to one line once everything is connected. -->
+    <details id="connect-box" class="ctl connect-box" open>
+      <summary><h3>Connect</h3><span id="conn-sum" class="conn-sum"></span></summary>
+      <div class="grid">
+        <section aria-labelledby="t-factory">
+          <h4 id="t-factory"><span class="step">1</span> The factory floor</h4>
+          <p>Which factory to pretend: its track and its stations, as you built them on the Carkaroo website.</p>
+          <div class="row"><select id="factory" aria-label="Factory"></select><button id="choose" type="button">Use it</button></div>
+        </section>
+        <section aria-labelledby="t-connect">
+          <h4 id="t-connect"><span class="step">2</span> The keys</h4>
+          <p>On the Carkaroo website: <b>Setup → Devices → Copy all for the simulator</b>. Paste it here. Or type each key
+            next to its device, like you will in the firmware.</p>
+          <textarea id="paste" rows="4" placeholder="broker: localhost&#10;port: 1883&#10;AGV-1: …&#10;S1: …" aria-label="Pasted keys"></textarea>
+          <div class="row"><button id="connect-all" class="go" type="button">Connect all</button>
+            <label class="inline">Broker <input id="host" value="localhost" maxlength="100" aria-label="Broker address"></label>
+            <label class="inline">Port <input id="port" type="number" value="1883" min="1" max="65535" aria-label="Broker port"></label></div>
+        </section>
+      </div>
+    </details>
+    <!-- what you use while practising: the floor, big, next to the devices and the play controls -->
+    <div class="sim-grid">
       <section class="ctl floor" aria-labelledby="t-floor">
         <h3 id="t-floor">The pretend floor</h3>
         <p id="floor-hint">Click a line to put an obstacle on it for 60 s.</p>
         <svg id="floor" class="floor-svg" role="img" aria-label="The pretend factory floor"></svg>
       </section>
+      <div class="side">
+        <section class="ctl" aria-labelledby="t-devices">
+          <h3 id="t-devices"><span class="step">3</span> The pretend devices</h3>
+          <p>Each one logs in with its own ID and key. A wrong key is refused, like on the real car.
+            <b>Disconnect</b> is like pulling its plug.</p>
+          <ul id="devices" class="devices"></ul>
+        </section>
+        <section class="ctl" aria-labelledby="t-play">
+          <h3 id="t-play">Play</h3>
+          <p>These change the pretend world, not the AI. Watch the Carkaroo website react.</p>
+          <div id="play"></div>
+        </section>
+      </div>
     </div>
   </main>
 
