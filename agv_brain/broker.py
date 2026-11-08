@@ -12,6 +12,7 @@ shows them (on the laptop only) and can make a new one.
 from __future__ import annotations
 
 import os
+import re
 import secrets
 import shutil
 import socket
@@ -25,7 +26,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 KEYS_FILE = ROOT / "config" / "devices.local.yaml"
 BRAIN = "brain"   # the AI's own login
-MOSQUITTO_DIRS = (r"C:\Program Files\mosquitto", r"C:\Program Files (x86)\mosquitto")
+DEVICE_ID = re.compile(r"[A-Za-z0-9_-]{1,32}")   # ids go into the ACL and password files
+MOSQUITTO_DIRS =(r"C:\Program Files\mosquitto", r"C:\Program Files (x86)\mosquitto")
 
 
 def find_tool(name: str) -> str | None:
@@ -161,9 +163,25 @@ class Broker:
     def devices(self) -> list[str]:
         return [*self.car_ids, *self.stations]
 
+    def set_stations(self, ids: list[str]) -> None:
+        """Use a new list of station nodes while running (the Setup page can add or remove
+        stations). New stations get a key; existing keys stay. A removed station keeps its
+        key in the file (so it works again if the station comes back) but can no longer log in."""
+        ids = list(dict.fromkeys(ids))
+        bad = [s for s in ids if not DEVICE_ID.fullmatch(s) or s == BRAIN or s in self.car_ids]
+        if bad:
+            raise ValueError(f"Not a valid station id: {', '.join(map(repr, bad))}")
+        if ids == self.stations:
+            return
+        self.stations = ids
+        self.keys = load_keys(self.devices, self.keys_file)
+        if self.proc:
+            self.reload()
+
     def _write_files(self) -> None:
         pw = self.folder / "passwords"
-        pw.write_text("".join(f"{u}:{k}\n" for u, k in self.keys.items()), encoding="utf-8")
+        allowed = [BRAIN, *self.devices]     # only current devices may log in
+        pw.write_text("".join(f"{u}:{self.keys[u]}\n" for u in allowed if self.keys.get(u)), encoding="utf-8")
         tool = find_tool("mosquitto_passwd")
         if not tool:
             raise RuntimeError("mosquitto_passwd was not found next to Mosquitto")
