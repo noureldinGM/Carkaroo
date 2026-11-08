@@ -26,7 +26,7 @@ const obstacles = new Map();  // "A|B" -> sim time it disappears (obstacles this
 let lastTs = 0;
 let lastSnap = null;
 
-// ---------- Roo: the logo's eyes and Roo on the Map page react to the live data (design/roo.js) ----------
+// ---------- Roo: the logo's eyes and Roo in the corner of every page react to the live data (design/roo.js) ----------
 const rooLogo = Roo.logo($("#logo"));
 const rooBuddy = Roo.buddy($("#roo-buddy"));
 const rooLogin = Roo.buddy($("#roo-login"));
@@ -38,6 +38,37 @@ function renderRoo(d) {
   rooLogo.set(r.mood);
   rooBuddy.set(r.mood, r.say);
 }
+// Roo rolls a little when you change page (it comes along with you)
+const dock = $("#roo-dock");
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function rooRoll() {
+  if (calm() || dock.classList.contains("lapping")) return;
+  dock.classList.remove("roll"); void dock.offsetWidth; dock.classList.add("roll");
+}
+// Roo's lap: pick up a box, drive off the right edge, come back across the whole screen to its spot
+function rooLap() {
+  if (dock.classList.contains("lapping")) return;
+  const mats = layout ? Object.keys(layout.materials) : ["A", "B", "C"];
+  const m = mats[Math.floor(Math.random() * mats.length)];
+  const name = layout && layout.materials[m] ? layout.materials[m].name : m;
+  const cargo = dock.querySelector(".roo-cargo");
+  cargo.className = `roo-cargo mat ${m}`;
+  cargo.textContent = m;
+  $("#extra").open = false;
+  if (calm()) { rooBuddy.play("love", 1800, `Here's a box of ${name}!`); return; }
+  dock.classList.remove("roll");
+  dock.classList.add("lapping");
+  rooBuddy.play("lap", Infinity, "");
+  const done = (ev) => {
+    if (ev.target !== dock) return;            // Roo's own little animations bubble up too
+    dock.removeEventListener("animationend", done);
+    dock.classList.remove("lapping");
+    rooBuddy.play("love", 2000, `Special delivery: ${name}! Lap done.`);
+  };
+  dock.addEventListener("animationend", done);
+}
+document.addEventListener("click", (ev) => { if (ev.target.closest("[data-lap]")) rooLap(); });
+
 // the play controls: Roo gets curious when you change something
 for (const id of ["#controls", "#map-controls"]) {
   $(id).addEventListener("click", (ev) => { if (ev.target.closest("button")) Roo.poke(rooMem); });
@@ -160,6 +191,7 @@ function route() {
   page = wanted();
   if (`#${page}` !== location.hash && !(page === "setup" && !location.hash)) history.replaceState(null, "", `#${page}`);
   if (page !== before) window.scrollTo(0, 0);
+  if (page !== before && before) rooRoll();
   document.body.classList.remove("booting");
   document.body.classList.toggle("logged-out", !factory);
   document.querySelectorAll(".page").forEach((s) => { s.hidden = s.dataset.page !== page; });
