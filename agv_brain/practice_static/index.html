@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carkaroo Simulator</title>
+  <link rel="icon" href="/design/logo/carkaroo-mark.svg" type="image/svg+xml">
+  <!-- light or dark, before the page draws: the saved choice, otherwise the computer's setting -->
+  <script>try { const t = localStorage.getItem("carkaroo-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;1,600;1,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="/design/tokens.css">
+  <link rel="stylesheet" href="/design/components.css">
+  <link rel="stylesheet" href="/design/roo.css">
+  <link rel="stylesheet" href="/static/practice.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-row">
+      <span id="logo" aria-label="Carkaroo"></span>
+      <span class="sim-title">Simulator</span>
+      <span class="mode-pill sim">Practice</span>
+      <span class="sim-factory" id="sim-factory"></span>
+    </div>
+    <div class="finish" aria-hidden="true"></div>
+  </header>
+
+  <main>
+    <h1 class="page-title">Practise connecting your factory</h1>
+    <p class="page-sub">This is <b>not</b> the Carkaroo website. It pretends to be your car and your stations, and logs
+      in to the website's broker with their keys, exactly like the real ones will. Keep the Carkaroo website open next
+      to it (<span class="mono">http://localhost:8050</span>) and watch each device turn green there.</p>
+    <div id="note"></div>
+
+    <div class="grid">
+      <section class="ctl" aria-labelledby="t-factory">
+        <h3 id="t-factory"><span class="step">1</span> The factory floor</h3>
+        <p>Which factory to pretend: its track and its stations, as you built them on the Carkaroo website.</p>
+        <div class="row"><select id="factory" aria-label="Factory"></select><button id="choose" type="button">Use it</button></div>
+      </section>
+
+      <section class="ctl" aria-labelledby="t-connect">
+        <h3 id="t-connect"><span class="step">2</span> Connect</h3>
+        <p>On the Carkaroo website: <b>Setup → Devices → Copy all for the simulator</b>. Paste it here. Or type each key
+          below, like you will in the firmware.</p>
+        <textarea id="paste" rows="4" placeholder="broker: localhost&#10;port: 1883&#10;AGV-1: …&#10;S1: …" aria-label="Pasted keys"></textarea>
+        <div class="row"><button id="connect-all" class="go" type="button">Connect all</button>
+          <label class="inline">Broker <input id="host" value="localhost" maxlength="100" aria-label="Broker address"></label>
+          <label class="inline">Port <input id="port" type="number" value="1883" min="1" max="65535" aria-label="Broker port"></label></div>
+      </section>
+    </div>
+
+    <section class="ctl" aria-labelledby="t-devices">
+      <h3 id="t-devices"><span class="step">3</span> The pretend devices</h3>
+      <p>Each one logs in with its own ID and key. A wrong key is refused, like on the real car.
+        <b>Disconnect</b> is like pulling its plug.</p>
+      <ul id="devices" class="devices"></ul>
+    </section>
+
+    <div class="grid">
+      <section class="ctl" aria-labelledby="t-play">
+        <h3 id="t-play">Play</h3>
+        <p>These change the pretend world, not the AI. Watch the Carkaroo website react.</p>
+        <div id="play"></div>
+      </section>
+      <section class="ctl floor" aria-labelledby="t-floor">
+        <h3 id="t-floor">The pretend floor</h3>
+        <p id="floor-hint">Click a line to put an obstacle on it for 60 s.</p>
+        <svg id="floor" class="floor-svg" role="img" aria-label="The pretend factory floor"></svg>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/design/roo.js"></script>
+  <script src="/static/practice.js"></script>
+</body>
+</html>

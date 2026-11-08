@@ -461,3 +461,11 @@ body.booting .roo-dock, body.logged-out .roo-dock { display: none; }
   .factory-chip { max-width: 100%; }
   .factory-chip b { max-width: 150px; }
 }
+
+/* ---------- Setup: run and devices (the website talks to devices, never to a simulation) ---------- */
+.run-wait { font-size: 13px; color: var(--warn); margin: 8px 0 0; }
+.run-wait.ok { color: var(--good); }
+.run-wait:empty { display: none; }
+.dev-tools { align-items: center; gap: 10px; margin-bottom: 8px; }
+.dev-tools .quiet { font-size: 12px; }
+.practice-hint code, .practice-hint .sim-url { font: 13px var(--mono); }

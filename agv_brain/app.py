@@ -2,14 +2,18 @@
 
     app = App.start()            # what scripts/run_app.py does: nothing runs yet
     app.login("Exhibit Factory") # the website's login page: open or make a factory
-    app.run("sim")               # "Try a simulation" / Start on the Setup page
+    app.run()                    # Start on the Setup page
     app.stop_session()           # Stop
 
 The website opens on the login page and the factory stays idle until someone presses
-Start. One factory session runs at a time (agv_brain.factory_sim.FactorySim: the AI plus
-whichever devices are simulated). Changing the mode or the track of a running factory
-stops it and starts a new one; the broker and the website keep running. The factory that
-was open last is saved in config/app.local.yaml, its setup in config/factories/<id>/.
+Start. The website never simulates anything: the car and the stations are devices that
+log in to the broker with their keys, either the real ones or the separate practice
+simulator (scripts/run_simulator.py, agv_brain/practice.py). One factory session runs at
+a time (agv_brain.factory_sim.FactorySim with nothing simulated: the AI). Changing the
+track of a running factory restarts it; the broker and the website keep running. The
+factory that was open last is saved in config/app.local.yaml, its setup in
+config/factories/<id>/. (The "sim" modes below are only for the tests and for
+scripts/run_factory_sim.py; the website always runs "real".)
 """
 
 from __future__ import annotations
@@ -48,7 +52,7 @@ class App:
         self.broker_error = broker_error
         self.state_file, self.log = state_file, log
         self.settings = load_settings()
-        self.mode, self.track, self.speed = "sim", "sample", 8.0
+        self.mode, self.track, self.speed = "real", "sample", 1.0
         self.factory: dict | None = None     # {"id", "name", ...} after the login page
         self.session: FactorySim | None = None
         self.layout: dict = {}
@@ -108,8 +112,7 @@ class App:
     def _open(self, factory: dict) -> None:
         self.factory = factory
         self.settings = load_settings(self.materials)
-        self.mode = factory["mode"] if factory["mode"] == "sim" or self.real_ok else "sim"
-        self.speed = factory["speed"]
+        self.mode, self.speed = "real", 1.0     # the website talks to devices, never to a simulation
         try:
             tracks.track_path(factory["track"])
             self.track = factory["track"]
@@ -215,7 +218,8 @@ class App:
             if mode not in MODES:
                 raise ValueError(f"mode must be one of {list(MODES)}")
             if mode != "sim" and not self.real_ok:
-                raise ValueError("The real car needs the MQTT broker. " + (self.broker_error or ""))
+                raise ValueError("The car and the stations connect through the MQTT broker, and it is not running. "
+                                 + (self.broker_error or ""))
             if track is not None:
                 tracks.track_path(track)        # raises if it does not exist
                 self._check_track(track)
@@ -242,7 +246,7 @@ class App:
             self._save()
 
     def run(self, mode: str | None = None, speed=None, track: str | None = None) -> None:
-        """Start the factory (Start / "Try a simulation"), or restart it with the change."""
+        """Start the factory (Start on the Setup page), or restart it with the change."""
         with self._lock:
             self.configure(mode, track, speed)
             if not self.session:

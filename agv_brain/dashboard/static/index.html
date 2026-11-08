@@ -83,23 +83,26 @@
       <h1 class="page-title" id="start-title">Hello</h1>
       <p class="page-sub">What would you like to do?</p>
       <div class="start-grid">
-        <button id="start-sim" class="start-card" type="button">
-          <b>Try a simulation</b>
-          <span>Everything is simulated: the car, the stations and their stock. Watch the AI decide, then play with it.</span>
+        <button id="start-run" class="start-card" type="button">
+          <b>Start my factory</b>
+          <span>The AI starts and waits for the car and the stations to log in with their keys. Then watch Roo work.</span>
         </button>
         <a href="#setup" class="start-card">
           <b>Set up my factory</b>
-          <span>Draw your track, connect the real car and stations with their keys, then press Start.</span>
+          <span>Its stations and materials, the track, and the keys for the car and the stations.</span>
         </a>
       </div>
+      <p class="hint practice-hint">No car or stations yet? Practise with the <b>Carkaroo Simulator</b>, a separate
+        website that pretends to be them and logs in with the same keys: run
+        <code>scriptsun_simulator.py</code> and open <span class="sim-url">http://localhost:8060</span>.</p>
       <p id="start-running" class="hint" hidden></p>
     </section>
 
     <!-- Setup (home): how the factory runs, its devices and its track -->
     <section class="page" data-page="setup" aria-label="Setup" hidden>
       <h1 class="page-title">Setup</h1>
-      <p class="page-sub">Build your factory here, then press Start: its stations and materials, the track, the
-        real car and stations with their keys, and how it runs.</p>
+      <p class="page-sub">Build your factory here, then press Start: its stations and materials, the track, and the
+        keys the car and the stations log in with.</p>
       <div id="setup-note"></div>
       <section class="ctl factory-card" aria-labelledby="fac-title">
         <h3 id="fac-title">Stations and materials</h3>
@@ -114,13 +117,13 @@
       </section>
       <div class="setup-grid">
         <section class="ctl" aria-labelledby="mode-title">
-          <h3 id="mode-title">How it runs</h3>
+          <h3 id="mode-title">Run</h3>
           <div id="setup-mode"></div>
         </section>
         <section class="ctl" aria-labelledby="dev-title">
           <h3 id="dev-title">Devices</h3>
-          <p>Each device logs in to the laptop's broker with its own key. A device turns green as soon as it sends
-            its first message.</p>
+          <p>The car and each station log in to the laptop's broker with their own key: the real ones, or the
+            Carkaroo Simulator for practice. A device turns green as soon as it sends its first message.</p>
           <div id="setup-devices"></div>
         </section>
       </div>
