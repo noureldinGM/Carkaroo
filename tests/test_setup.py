@@ -100,7 +100,9 @@ def app():
 
 
 def test_switch_to_real_car_stops_the_simulated_car(app):
-    assert app.mode == "sim" and app.session.car is not None
+    assert app.mode == "sim" and app.session is None          # nothing runs until Start
+    app.run()
+    assert app.session.car is not None
     app.switch("real_car")
     assert app.session.car is None and app.session.stations      # stations stay simulated
     assert app.session.clock.scale == 1.0

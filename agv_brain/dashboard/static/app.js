@@ -1,6 +1,7 @@
-// Carkaroo live dashboard: polls /api/snapshot and draws what the AI sees and decides.
-// Pages: Now (with the "Try it" controls under the map), Stations, AI, History, and Setup
-// (simulation or real factory). Only the open page is redrawn.
+// Carkaroo website: polls /api/snapshot and draws what the AI sees and decides.
+// Login (the factory's name) -> Start (try a simulation, or set up my factory) -> Setup (home),
+// Map, Stations (with the play controls), History, and the AI page under Extra.
+// Nothing runs until Start; only the open page is redrawn.
 "use strict";
 
 const $ = (s) => document.querySelector(s);
@@ -8,31 +9,39 @@ const SVGNS = "http://www.w3.org/2000/svg";
 const OUT = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 const ANGLE = { N: -90, E: 0, S: 90, W: 180 };
 const SPUR = 26;              // gap between a line end and its box, in map units
-const PAGES = ["now", "stations", "ai", "history", "setup"];
+const PAGES = ["login", "start", "setup", "map", "stations", "history", "ai"];
+const LIVE = new Set(["map", "stations", "history", "ai"]);   // pages that need a running factory
 
 let layout = null;
 let simCar = false;            // the car is simulated: obstacle and battery controls
 let simStations = false;       // the stations are simulated: stock control
 let layoutVersion = -1;
-let page = "now";
-let tryOpen = false;           // the "Try it" controls under the map on the Now page
+let page = "";
+let factory = null;            // {id, name} of the open factory, null before login
+let running = false;           // a factory session is running (after Start)
+let local = true;              // this browser is on the laptop itself (it may change the setup)
 let nodes = {};
 let map = {};                 // svg layers and per-node box elements
 const obstacles = new Map();  // "A|B" -> sim time it disappears (obstacles this page placed)
 let lastTs = 0;
 let lastSnap = null;
 
-// ---------- Roo: the logo's eyes and Roo on the Now page react to the live data (design/roo.js) ----------
+// ---------- Roo: the logo's eyes and Roo on the Map page react to the live data (design/roo.js) ----------
 const rooLogo = Roo.logo($("#logo"));
 const rooBuddy = Roo.buddy($("#roo-buddy"));
+const rooLogin = Roo.buddy($("#roo-login"));
 const rooMem = {};
 function renderRoo(d) {
+  if (!d.factory && d.setup) { rooLogo.set("happy"); rooLogin.set("happy", "Hi! I'm Roo. What's your factory called?"); return; }
+  if (!d.running) { rooLogo.set("asleep"); rooBuddy.set("asleep", "Nothing is running. Press Start and I'll get going."); return; }
   const r = Roo.read(d, rooMem);
   rooLogo.set(r.mood);
   rooBuddy.set(r.mood, r.say);
 }
-// Try it: Roo gets curious when you change something
-$("#controls").addEventListener("click", (ev) => { if (ev.target.closest("button")) Roo.poke(rooMem); });
+// the play controls: Roo gets curious when you change something
+for (const id of ["#controls", "#map-controls"]) {
+  $(id).addEventListener("click", (ev) => { if (ev.target.closest("button")) Roo.poke(rooMem); });
+}
 
 // ---------- light / dark ----------
 // starts with the computer's setting; the choice is remembered (the page reads it before drawing)
@@ -80,9 +89,20 @@ function setHtml(el, html) {
 }
 const chip = (m, cls = "") => `<span class="mat ${esc(m)} ${cls}" aria-label="material ${esc(m)}">${esc(m)}</span>`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+// POST JSON; on a refusal, show the server's reason and return false
 async function post(url, body) {
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const r = await postJson(url, body);
+  if (!r.ok) toast(r.data.error || "That did not work.");
   return r.ok;
+}
+async function postJson(url, body) {
+  let r;
+  try {
+    r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch (e) { return { ok: false, status: 0, data: { error: "Can't reach the AI. Is the app running?" } }; }
+  let data = {};
+  try { data = await r.json(); } catch (e) { /* empty answer */ }
+  return { ok: r.ok, status: r.status, data };
 }
 let toastTimer = 0;
 function toast(text) {
@@ -125,45 +145,123 @@ window.addEventListener("resize", moveTabInk);
   requestAnimationFrame(() => requestAnimationFrame(() => $(".tabs").classList.add("ready")));
 });
 
+// which page to show: the login page until a factory is open, then the page in the address
+// (Setup is home). Old links (#now, #try) go to the Map.
+function wanted() {
+  let want = location.hash.slice(1);
+  if (want === "now" || want === "try") want = "map";
+  if (!factory) return "login";
+  return PAGES.includes(want) ? want : "setup";
+}
+
 function route() {
-  const want = location.hash.slice(1);
+  if (!lastSnap) return;                    // the first snapshot decides (login or not)
   const before = page;
-  // the old "Try it" page is now the drawer under the map on the Now page
-  if (want === "try") { setTry(true); history.replaceState(null, "", "#now"); }
-  page = PAGES.includes(want) ? want : "now";
+  page = wanted();
+  if (`#${page}` !== location.hash && !(page === "setup" && !location.hash)) history.replaceState(null, "", `#${page}`);
   if (page !== before) window.scrollTo(0, 0);
+  document.body.classList.remove("booting");
+  document.body.classList.toggle("logged-out", !factory);
   document.querySelectorAll(".page").forEach((s) => { s.hidden = s.dataset.page !== page; });
-  document.querySelectorAll(".tabs a").forEach((a) =>
+  document.querySelectorAll(".tabs a, .extra-menu a").forEach((a) =>
     a.dataset.tab === page ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"));
+  $("#extra").open = false;
   moveTabInk();
   placeMap();
-  if (lastSnap) render(lastSnap);
+  showIdle();
+  if (page === "login") loadFactories();
+  if (page === "start") renderStart();
+  render(lastSnap);
   if (page === "setup") loadSetup();
-  if (want === "try") $("#try-panel").scrollIntoView({ block: "start" });
 }
 window.addEventListener("hashchange", route);
+// close the Extra menu when clicking anywhere else
+document.addEventListener("click", (ev) => { if (!ev.target.closest("#extra")) $("#extra").open = false; });
 
 function placeMap() {
   if (!layout) return;
   const svg = $("#map");
-  if (svg.parentNode !== $("#slot-now")) $("#slot-now").appendChild(svg);
+  if (svg.parentNode !== $("#slot-map")) $("#slot-map").appendChild(svg);
   svg.classList.add("placed");
-  svg.classList.toggle("clickable", simCar && tryOpen);
-  $("#floor-title").textContent = simCar && tryOpen ? "Click a line to put an obstacle on it" : "Factory floor";
+  svg.classList.toggle("clickable", simCar && running);
+  $("#floor-title").textContent = simCar && running ? "Factory floor · click a line to put an obstacle on it" : "Factory floor";
 }
 
-function setTry(open) {
-  tryOpen = open;
-  $("#try-panel").hidden = !open;
-  const b = $("#try-toggle");
-  b.setAttribute("aria-expanded", String(open));
-  b.textContent = open ? "Close Try it" : "Try it: change what the AI sees";
-  b.className = open ? "ghost" : "go";
-  placeMap();
+// a live page while nothing runs: say so, with the way to start
+function showIdle() {
+  const html = running ? "" : `<div class="idle"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>
+    <div><b>The factory is stopped.</b><span>Start it to see Roo drive and the AI decide.</span></div>
+    ${local ? `<button class="go" data-start="sim" type="button">Start a simulation</button>` : ""}
+    <a href="#setup" class="ghost-link">Setup</a></div>`;
+  document.querySelectorAll(".idle-slot").forEach((el) => setHtml(el, html));
+  if (!running && map.car) {                 // the stopped factory: just the track, no car or route
+    map.routes.innerHTML = ""; map.marks.innerHTML = "";
+    map.car.g.style.display = "none";
+    for (const e of Object.values(map.box)) {
+      if (e.dot) e.dot.setAttribute("class", "dot ok");
+      e.rect.setAttribute("class", "box");
+    }
+  }
+  document.querySelectorAll(".page[data-page]").forEach((s) => s.classList.toggle("is-idle", !running && LIVE.has(s.dataset.page)));
 }
-$("#try-toggle").addEventListener("click", () => {
-  setTry(!tryOpen);
-  if (tryOpen) $("#try-panel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+document.addEventListener("click", async (ev) => {
+  const b = ev.target.closest("[data-start]");
+  if (!b) return;
+  b.disabled = true;
+  if (await post("/api/run", { mode: b.dataset.start })) {
+    toast("Starting… Roo is on its way.");
+    running = true;
+    if (page !== "map") location.hash = "#map";
+  }
+  b.disabled = false;
+});
+
+// ---------- Login and Start ----------
+async function loadFactories() {
+  let list = [];
+  try { list = (await (await fetch("/api/factories", { cache: "no-store" })).json()).factories || []; } catch (e) { /* offline */ }
+  setHtml($("#login-list"), !local ? `<p class="hint">Open the website on the laptop to choose a factory.</p>`
+    : list.length ? `<p class="hint">Or open one you made before:</p><div class="row">${list.map((f) =>
+      `<button class="ghost small" type="button" data-open="${esc(f.name)}">${esc(f.name)}</button>`).join("")}</div>` : "");
+  $("#login-form").querySelectorAll("input, button").forEach((e) => { e.disabled = !local; });
+}
+
+async function login(name) {
+  const r = await postJson("/api/login", { name });
+  if (!r.ok) { $("#login-err").textContent = r.data.error || "Could not open the factory."; return; }
+  $("#login-err").textContent = "";
+  factory = r.data.factory;
+  running = false;
+  layout = null;              // the next snapshot rebuilds the map for this factory
+  rooBuddy.play("love", 1600, `Welcome to ${factory.name}!`);
+  location.hash = "#start";
+  route();
+}
+$("#login-form").addEventListener("submit", (ev) => { ev.preventDefault(); login($("#login-name").value); });
+$("#login-name").addEventListener("input", () => { $("#login-err").textContent = ""; });
+$("#login-list").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-open]");
+  if (b) login(b.dataset.open);
+});
+$("#switch-factory").addEventListener("click", async () => {
+  if (running && !confirm(`Stop ${factory.name} and go back to the login page?`)) return;
+  if (!(await post("/api/logout", {}))) return;
+  factory = null; running = false;
+  location.hash = "#login";
+  route();
+});
+
+function renderStart() {
+  $("#start-title").textContent = factory ? `Hello, ${factory.name}` : "Hello";
+  const note = $("#start-running");
+  note.hidden = !running;
+  if (running) note.innerHTML = `The factory is already running. <a href="#map">Open the map</a>.`;
+  $("#start-sim").disabled = !local;
+}
+$("#start-sim").addEventListener("click", async () => {
+  $("#start-sim").disabled = true;
+  if (await post("/api/run", { mode: "sim" })) { running = true; toast("Starting the simulation…"); location.hash = "#map"; }
+  $("#start-sim").disabled = !local;
 });
 
 // ---------- map (built once) ----------
@@ -230,7 +328,7 @@ function buildMap() {
     const line = sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "track" }, g);
     const hit = sv("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, class: "hit" }, g);
     hit.addEventListener("click", () => placeObstacle(a, b));
-    hit.addEventListener("mouseenter", () => simCar && tryOpen && line.classList.add("hover"));
+    hit.addEventListener("mouseenter", () => simCar && running && line.classList.add("hover"));
     hit.addEventListener("mouseleave", () => line.classList.remove("hover"));
   }
   for (const raw of layout.nodes) {
@@ -295,11 +393,13 @@ function buildMap() {
 }
 
 function placeObstacle(a, b) {
-  if (!simCar || !tryOpen || page !== "now") return;
+  if (!simCar || !running || page !== "map") return;
   if (!confirm(`Put an obstacle on the line ${a}–${b} for 60 simulated seconds?\nThe car stops there; if it is still blocked, the AI finds another way.`)) return;
-  post("/api/sim", { cmd: "obstacle", edge: [a, b], duration_s: 60 });
-  obstacles.set(`${a}|${b}`, lastTs + 60);
-  toast(`Obstacle on ${a}–${b}. Watch the car.`);
+  post("/api/sim", { cmd: "obstacle", edge: [a, b], duration_s: 60 }).then((ok) => {
+    if (!ok) return;
+    obstacles.set(`${a}|${b}`, lastTs + 60);
+    toast(`Obstacle on ${a}–${b}. Watch the car.`);
+  });
 }
 
 function stationLevel(st) {
@@ -355,6 +455,7 @@ function renderMap(state) {
     x = A.x + (B.x - A.x) * p; y = A.y + (B.y - A.y) * p;
     heading = B.x > A.x ? "E" : B.x < A.x ? "W" : B.y > A.y ? "S" : "N";
   }
+  map.car.g.style.display = "";
   map.car.g.style.transform = `translate(${x}px, ${y}px)`;
   map.car.body.setAttribute("transform", `rotate(${ANGLE[heading] ?? 0})`);
   const mode = !car.online ? "offline" : car.mode === "BLOCKED" || car.mode === "ERROR" ? "blocked"
@@ -385,7 +486,8 @@ function carSentence(state) {
   return `Roo ${CAR_DOING[car.mode] || car.mode.toLowerCase()} at ${car.node}.`;
 }
 
-const batteryText = (state) => `⚡ Battery ${Math.round(state.car.battery)}%`;
+// an offline car's battery is not known
+const batteryText = (state) => state.car.online ? `⚡ Battery ${Math.round(state.car.battery)}%` : "⚡ Battery –";
 
 // what Roo is doing right now, as the big line on the Now page
 function taskHero(state) {
@@ -417,6 +519,8 @@ function renderHero(dec, state) {
     return;
   }
   const label = "The AI's choice";
+  const offline = !state.car.online
+    ? `<p><span class="badge crit">Roo is offline: nothing moves until the car connects (see Setup → Devices)</span></p>` : "";
   if (!q.length) {
     const waiting = state.requests.length;
     // requests are open but the safety rules let none through (empty warehouse, blocked line, ...)
@@ -427,12 +531,12 @@ function renderHero(dec, state) {
       <p class="why">${plural(waiting, "request")} waiting, but the safety rules stop the car:</p>
       <ul class="blocked">${reasons.map((a) => `<li>${esc(a)}</li>`).join("") || "<li>Checking again…</li>"}</ul>
       ${reasons.some((a) => a.startsWith("Warehouse")) ? `<p class="why">Restocked it? Press <b>Refilled</b> on the <a href="#stations">Stations page</a>.</p>` : ""}
-      ${carLine(state)}` : `
+      ${offline}${carLine(state)}` : `
       <div class="label eyebrow">The AI's choice</div>
       <h1>All stocked up</h1>
       <p class="why">Every station has enough for now, so Roo takes a break. The AI asks for a delivery
         by itself as soon as a station would run low before the car could get there.</p>
-      ${carLine(state)}`;
+      ${offline}${carLine(state)}`;
     return;
   }
   const first = q[0];
@@ -444,7 +548,7 @@ function renderHero(dec, state) {
       <b>${fmtS(first.stockout_s)}</b>. The trip takes ${fmtS(first.trip_s)}.${first.slack_s < 0 ? " It stops for a short time even if served now, so it cannot wait." : ""}</p>
     ${badge}
     ${dec.charge_first ? `<p><span class="badge crit">⚡ Battery too low: the car charges first</span></p>` : ""}
-    ${carLine(state)}`;
+    ${offline}${carLine(state)}`;
 }
 
 // "✓ Best possible choice" when the exact optimizer agrees, else "≈ Almost best"
@@ -464,7 +568,7 @@ function carLine(state) {
 function renderNext(dec, state) {
   const q = ordered(dec);
   const busy = !!(state.car.online && state.car.task);
-  const more = (n) => n > 0 ? `<p class="more">${plural(n, "more request")} waiting · <a href="#ai">see the full order</a></p>` : "";
+  const more = (n) => n > 0 ? `<p class="more">${plural(n, "more request")} waiting · <a href="#ai">see the AI's full order</a></p>` : "";
   if (!busy || !q.length) { setHtml($("#next"), more(q.length - 1)); return; }
   const first = q[0];
   setHtml($("#next"), `<div class="up-next">
@@ -481,11 +585,11 @@ function renderNext(dec, state) {
 function renderKpis(state) {
   const stop = Object.values(state.stations).reduce((acc, st) =>
     acc + Object.values(st.materials).reduce((a, v) => a + v.stopped_s, 0), 0);
-  const bat = Math.round(state.car.battery);
+  const bat = Math.round(state.car.battery), on = state.car.online;
   setHtml($("#hist-kpis"), `
     <div class="kpi"><b>${state.stats.deliveries}</b><span>deliveries</span></div>
     <div class="kpi${stop > 0.5 ? " bad" : ""}"><b>${fmtS(stop)}</b><span>lines stopped</span></div>
-    <div class="kpi${bat < 20 ? " bad" : ""}"><b>${bat}%</b><span>battery</span></div>`);
+    <div class="kpi${on && bat < 20 ? " bad" : ""}"><b>${on ? `${bat}%` : "–"}</b><span>${on ? "battery" : "battery (Roo offline)"}</span></div>`);
 }
 
 // ---------- Stations ----------
@@ -532,7 +636,7 @@ function renderAI(dec, state) {
   $("#ai-score").innerHTML = `
     <div class="big">${pct === null ? "–" : `${pct}%`}</div>
     <p>Best possible choice in <b>${s.optimizer_agrees} of ${s.decisions}</b> decisions so far,
-      checked by an exact optimizer that tries every order.</p>
+      checked live by the examiner (the exact optimizer).</p>
     <div class="policy">${dec && dec.policy !== "ml" ? `Rule in use: ${esc(dec.policy)}` : "Model: ML ranker (gradient-boosted trees)"}</div>`;
 
   const q = ordered(dec);
@@ -640,17 +744,19 @@ function renderHistory(state) {
 // ---------- header ----------
 function setLink(ok, state) {
   const el = $("#link");
+  el.hidden = ok && !running;                // stopped: the mode pill already says so
   const carOk = state && state.car.online;
   el.className = `link ${ok && carOk ? "on" : "off"}`;
   el.textContent = !ok ? "AI offline" : carOk ? "Roo online" : "Roo offline";
 }
 
-// ---------- Try it ----------
+// ---------- play controls ----------
 // the warehouse has no sensor: a person presses "Refilled" after restocking a rack
 $("#warehouse").addEventListener("click", async (ev) => {
   const b = ev.target.closest("[data-refill]");
   if (!b) return;
   const m = b.dataset.refill, info = layout.materials[m];
+  if (!running) { toast("Start the factory first."); return; }
   if (await post("/api/refill", { material: m })) {
     toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
     rooBuddy.play("love", 1800, `Thanks for refilling ${m}!`);
@@ -659,6 +765,15 @@ $("#warehouse").addEventListener("click", async (ev) => {
 
 function buildControls() {
   const stationOpts = Object.entries(layout.stations).map(([id, s]) => `<option value="${esc(id)}">${esc(s.name)} (${esc(id)})</option>`).join("");
+  $("#map-controls").innerHTML = simCar ? `
+    <div class="ctl"><h3>Low battery</h3>
+      <p>Below 20% the AI sends the car to charge before the next delivery.</p>
+      <button class="ghost" id="bat">Drain battery to 15%</button></div>
+    <div class="ctl"><h3>Obstacle</h3>
+      <p>Click a line on the map to block it for 60 s. The car stops, waits 10 s, then the AI finds another way.</p>
+      <button class="ghost" id="clr">Remove all obstacles</button></div>`
+    : `<div class="ctl"><h3>The real car</h3><p>Test it for real: put something in front of its ultrasonic sensor.
+      After 10 s the AI sends it another way.</p></div>`;
   $("#controls").innerHTML = `
     <div class="ctl"><h3>Ask for a delivery</h3>
       <p>Add a request by hand and see where the AI puts it.</p>
@@ -668,25 +783,18 @@ function buildControls() {
     <div class="ctl"><h3>Change a stock reading</h3>
       <p>Pretend a load cell reads a different number. Try a low one.</p>
       <div class="row"><select id="sk-st" aria-label="Station">${stationOpts}</select><select id="sk-m" aria-label="Material"></select>
-        <input id="sk-v" type="number" min="0" value="2" aria-label="Units"><button id="sk-go">Set</button></div></div>` : ""}
-    ${simCar ? `
-    <div class="ctl"><h3>Low battery</h3>
-      <p>Below 20% the AI sends the car to charge before the next delivery.</p>
-      <button class="ghost" id="bat">Drain battery to 15%</button></div>
-    <div class="ctl"><h3>Obstacle</h3>
-      <p>Click a line on the map to block it for 60 s. The car stops, waits 10 s, then the AI finds another way.</p>
-      <button class="ghost" id="clr">Remove all obstacles</button></div>`
-    : `<div class="ctl"><h3>The real car</h3><p>Test it for real: put something in front of its ultrasonic sensor.
-      After 10 s the AI sends it another way.</p></div>`}`;
+        <input id="sk-v" type="number" min="0" value="2" aria-label="Units"><button id="sk-go">Set</button></div></div>`
+    : `<div class="ctl"><h3>Real stations</h3><p>The stock comes from the stations' load cells. Take a box off a
+      scale and watch the AI react.</p></div>`}`;
   const fill = (stSel, mSel) => {
     const mats = layout.stations[$(stSel).value].materials;
-    $(mSel).innerHTML = mats.map((m) => `<option value="${m}">${m} · ${esc(layout.materials[m].name)}</option>`).join("");
+    $(mSel).innerHTML = mats.map((m) => `<option value="${esc(m)}">${esc(m)} · ${esc(layout.materials[m].name)}</option>`).join("");
   };
   $("#rq-st").addEventListener("change", () => fill("#rq-st", "#rq-m"));
   fill("#rq-st", "#rq-m");
   $("#rq-go").addEventListener("click", async () => {
     const st = $("#rq-st").value, m = $("#rq-m").value;
-    if (await post("/api/request", { material: m, station: st })) toast(`Requested ${m} for ${st}. See where the AI ranks it.`);
+    if (await post("/api/request", { material: m, station: st })) toast(`Asked for ${m} at ${layout.stations[st].name}. See where the AI puts it on the Map.`);
   });
   if (simStations) {
     $("#sk-st").addEventListener("change", () => fill("#sk-st", "#sk-m"));
@@ -714,12 +822,7 @@ let setup = null;           // last /api/setup answer
 let setupShape = "";        // what the Setup page was built for (rebuilt only when it changes)
 const shownKeys = new Set();
 
-async function postJson(url, body) {
-  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  let data = {};
-  try { data = await r.json(); } catch (e) { /* empty answer */ }
-  return { ok: r.ok, data };
-}
+const trackName = (s) => (s.tracks.find((x) => x.id === s.track) || {}).name || s.track;
 
 function agoText(s) {
   if (s === null || s === undefined) return "never seen";
@@ -732,7 +835,7 @@ async function loadSetup() {
     if (!r.ok) return;
     setup = await r.json();
   } catch (e) { return; }
-  const shape = JSON.stringify([setup.mode, setup.track, setup.speed, setup.local, setup.broker.ok,
+  const shape = JSON.stringify([setup.mode, setup.track, setup.speed, setup.local, setup.broker.ok, setup.running,
     setup.tracks.map((x) => x.id), setup.devices.map((d) => [d.id, d.key, d.simulated])]);
   if (shape !== setupShape) { setupShape = shape; buildSetup(); }
   updateDevices();
@@ -760,10 +863,15 @@ function buildSetup() {
         <input id="set-speed" type="range" min="1" max="20" step="1" value="${s.speed}"${readOnly ? " disabled" : ""}
           aria-describedby="speed-val"><span class="speed-end">x20</span>
         <output id="speed-val" class="speed-val">x${s.speed}</output></label>
-      <button id="set-apply"${readOnly ? " disabled" : ""}>Apply</button>
     </div>
-    <p class="hint">Now running: <b>${esc(s.mode_name)}</b> on <b>${esc((s.tracks.find((x) => x.id === s.track) || {}).name || s.track)}</b>.
-      Applying restarts the AI in a few seconds; the website stays open.</p>`;
+    <div class="row run-row">
+      ${s.running ? `<button id="set-apply"${readOnly ? " disabled" : ""}>Apply changes</button>
+        <button class="ghost" id="set-stop"${readOnly ? " disabled" : ""}>Stop</button>`
+        : `<button class="go" id="set-apply"${readOnly ? " disabled" : ""}>Start</button>`}
+    </div>
+    <p class="hint">${s.running
+      ? `Running: <b>${esc(s.mode_name)}</b> on <b>${esc(trackName(s))}</b>. Applying a change restarts the AI in a few seconds.`
+      : `Stopped. Press <b>Start</b> to run <b>${esc(trackName(s))}</b>; the AI starts in a few seconds.`}</p>`;
   const speedShown = () => { $("#speed-wrap").hidden = document.querySelector('input[name="mode"]:checked').value !== "sim"; };
   document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", () => {
     document.querySelectorAll(".mode").forEach((m) => m.classList.toggle("on", m.querySelector("input").checked));
@@ -773,11 +881,19 @@ function buildSetup() {
   $("#set-speed").addEventListener("input", () => { $("#speed-val").textContent = `x${$("#set-speed").value}`; });
   $("#set-apply").addEventListener("click", async () => {
     const mode = document.querySelector('input[name="mode"]:checked').value;
-    const btn = $("#set-apply");
-    btn.disabled = true; btn.textContent = "Switching…";
-    const r = await postJson("/api/mode", { mode, track: $("#set-track").value, speed: Number($("#set-speed").value) });
-    btn.disabled = false; btn.textContent = "Apply";
-    toast(r.ok ? `Now running: ${MODE_INFO[mode][0]}.` : (r.data.error || "Could not switch."));
+    const btn = $("#set-apply"), label = btn.textContent;
+    btn.disabled = true; btn.textContent = s.running ? "Switching…" : "Starting…";
+    const body = { mode, track: $("#set-track").value, speed: Number($("#set-speed").value) };
+    let r = await postJson("/api/mode", body);
+    if (r.ok && !s.running) r = await postJson("/api/run", {});
+    btn.disabled = false; btn.textContent = label;
+    toast(r.ok ? `${s.running ? "Now running" : "Started"}: ${MODE_INFO[mode][0]}.` : (r.data.error || "Could not start."));
+    if (r.ok) running = true;
+    setupShape = "";
+    loadSetup();
+  });
+  if ($("#set-stop")) $("#set-stop").addEventListener("click", async () => {
+    if (await post("/api/stop", {})) { running = false; toast("Stopped. Roo is resting."); }
     setupShape = "";
     loadSetup();
   });
@@ -857,25 +973,29 @@ function updateDevices() {
     const li = document.querySelector(`.device[data-dev="${CSS.escape(d.id)}"]`);
     if (!li) continue;
     li.classList.toggle("online", d.online);
-    li.querySelector(".dev-state").textContent = d.simulated ? (d.online ? "simulated · running" : "simulated · starting")
+    li.querySelector(".dev-state").textContent = d.simulated ? (!setup.running ? "simulated · stopped" : d.online ? "simulated · running" : "simulated · starting")
       : d.online ? `online · last message ${agoText(d.last_seen_s)}` : `offline · ${agoText(d.last_seen_s)}`;
   }
 }
 
 function setMode(d) {
   const pill = $("#mode-pill");
-  pill.hidden = !d.mode;
-  if ($(".tab-setup").hidden !== !d.setup) { $(".tab-setup").hidden = !d.setup; moveTabInk(); }
+  pill.hidden = !d.mode || !factory;
+  $("#factory-chip").hidden = !factory || !d.setup;
+  if (factory) $("#factory-name").textContent = factory.name;
+  $("#switch-factory").disabled = !local;
   if (!d.mode) return;
-  pill.textContent = (MODE_INFO[d.mode.id] || [d.mode.name])[0];
-  pill.className = `mode-pill ${d.mode.id === "sim" ? "sim" : "real"}`;
+  pill.textContent = d.running ? (MODE_INFO[d.mode.id] || [d.mode.name])[0] : "Stopped";
+  pill.className = `mode-pill ${!d.running ? "stopped" : d.mode.id === "sim" ? "sim" : "real"}`;
 }
 
 // ---------- main loop ----------
 function render(d) {
   const state = d.state, dec = d.decision;
+  $("#clock").hidden = !state;              // no factory time while stopped
+  if (!state) return;
   $("#clock").textContent = clock(state.ts);
-  if (page === "now") { renderMap(state); renderHero(dec, state); renderNext(dec, state); }
+  if (page === "map") { renderMap(state); renderHero(dec, state); renderNext(dec, state); }
   else if (page === "stations") renderStations(state);
   else if (page === "ai") renderAI(dec, state);
   else if (page === "history") { renderKpis(state); renderHistory(state); }
@@ -889,21 +1009,24 @@ async function poll() {
     const r = await fetch("/api/snapshot", { cache: "no-store" });
     const d = await r.json();
     const parts = d.sim_parts || { car: d.sim, stations: d.sim };
+    const first = !lastSnap;
+    const was = [factory && factory.id, running, local].join("|");
+    factory = d.setup ? d.factory : { id: "", name: "" };   // the plain dashboard has no login
+    running = d.running !== false;
+    local = d.local !== false;
     if (!layout || d.layout_version !== layoutVersion || parts.car !== simCar || parts.stations !== simStations) {
       // first load, a new track or a new mode: rebuild the map and the controls
-      const first = !layout;
       layout = d.layout; layoutVersion = d.layout_version;
       simCar = parts.car; simStations = parts.stations;
       nodes = {}; obstacles.clear();
       buildMap(); buildControls();
-      if (first) route(); else placeMap();
+      placeMap();
     }
     setMode(d);
-    if (d.state) {
-      lastTs = d.state.ts;
-      lastSnap = d;
-      render(d);
-    }
+    lastSnap = d;
+    if (d.state) lastTs = d.state.ts;
+    if (first || was !== [factory && factory.id, running, local].join("|")) route();   // login, Start or Stop
+    else render(d);
     renderRoo(d);
     setLink(true, d.state);
   } catch (e) {

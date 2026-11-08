@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="/design/roo.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="booting">
   <!-- Roo, the Carkaroo car, for small pictures (waiting text, footer) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="roo" viewBox="0 0 44 30">
@@ -32,15 +32,23 @@
   </svg>
   <header class="top">
     <div class="top-row">
-      <a class="brand" href="#now" aria-label="Carkaroo, live factory"><span id="logo"></span></a>
+      <a class="brand" href="#setup" aria-label="Carkaroo, home"><span id="logo"></span></a>
       <nav class="tabs" aria-label="Pages">
-        <a href="#now" data-tab="now">Now</a>
+        <a href="#setup" data-tab="setup">Setup</a>
+        <a href="#map" data-tab="map">Map</a>
         <a href="#stations" data-tab="stations">Stations</a>
-        <a href="#ai" data-tab="ai">AI</a>
         <a href="#history" data-tab="history">History</a>
-        <a href="#setup" data-tab="setup" class="tab-setup" hidden>Setup</a>
       </nav>
+      <details class="extra" id="extra">
+        <summary>Extra</summary>
+        <div class="extra-menu">
+          <a href="#ai" data-tab="ai">The AI, explained</a>
+          <a href="/design/">Design system</a>
+        </div>
+      </details>
       <div class="status">
+        <span id="factory-chip" class="factory-chip" hidden><b id="factory-name"></b>
+          <button id="switch-factory" class="ghost small" type="button">Switch factory</button></span>
         <a id="mode-pill" class="mode-pill" href="#setup" hidden></a>
         <button id="theme" class="theme-btn" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">&#9790;</span></button>
         <span id="clock" class="clock" title="Factory time">--:--</span>
@@ -51,72 +59,50 @@
   </header>
 
   <main>
-    <!-- Now: what Roo is doing, the AI's next choice, and the floor. "Try it" opens the controls below. -->
-    <section class="page" data-page="now" aria-label="Now">
-      <div class="now-grid">
-        <div class="now-left">
-          <div id="roo-buddy" class="roo-spot"></div>
-          <div id="hero" class="hero"><p class="waiting"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>Roo is waiting for the AI…</p></div>
-          <div id="next" class="next"></div>
-        </div>
-        <div class="floor-card">
-          <div class="floor-head">
-            <span id="floor-title">Factory floor</span>
-            <span class="floor-legend"><i class="lg route"></i>route <i class="lg later"></i>after pickup <i class="lg blk"></i>blocked</span>
+    <!-- Login: the factory's name, nothing else -->
+    <section class="page" data-page="login" aria-label="Open a factory" hidden>
+      <div class="login">
+        <div id="roo-login" class="roo-spot"></div>
+        <h1 class="page-title">Welcome to Carkaroo</h1>
+        <p class="page-sub">The AI delivery car that carries what the line needs, before it runs out.</p>
+        <form id="login-form" class="login-form" autocomplete="off">
+          <label for="login-name">Factory name</label>
+          <div class="row">
+            <input id="login-name" maxlength="40" placeholder="e.g. Exhibit Factory" required>
+            <button type="submit" class="go">Enter</button>
           </div>
-          <div id="slot-now" class="map-slot"></div>
-        </div>
+          <span class="err-text" id="login-err" role="alert"></span>
+        </form>
+        <div id="login-list" class="login-list"></div>
       </div>
-      <div class="try-bar">
-        <button id="try-toggle" class="go" type="button" aria-expanded="false" aria-controls="try-panel">Try it: change what the AI sees</button>
+    </section>
+
+    <!-- Start: right after login, and whenever nothing is running -->
+    <section class="page" data-page="start" aria-label="Start" hidden>
+      <h1 class="page-title" id="start-title">Hello</h1>
+      <p class="page-sub">What would you like to do?</p>
+      <div class="start-grid">
+        <button id="start-sim" class="start-card" type="button">
+          <b>Try a simulation</b>
+          <span>Everything is simulated: the car, the stations and their stock. Watch the AI decide, then play with it.</span>
+        </button>
+        <a href="#setup" class="start-card">
+          <b>Set up my factory</b>
+          <span>Draw your track, connect the real car and stations with their keys, then press Start.</span>
+        </a>
       </div>
-      <section id="try-panel" class="try-panel" aria-label="Try it" hidden>
-        <h2 class="section-title"><span>Try it</span></h2>
-        <p class="page-sub">Change what the AI sees, then watch its choice and the map above change.</p>
-        <div id="controls" class="controls"></div>
-      </section>
+      <p id="start-running" class="hint" hidden></p>
     </section>
 
-    <!-- Stations: stock at every station and in the warehouse -->
-    <section class="page" data-page="stations" aria-label="Stations" hidden>
-      <h1 class="page-title">Stock</h1>
-      <p class="page-sub">What every station has left, measured by its load cells. The line shows the safety level.</p>
-      <div id="station-list" class="station-grid"></div>
-      <h2 class="section-title"><span>Warehouse</span></h2>
-      <div id="warehouse" class="warehouse"></div>
-    </section>
-
-    <!-- AI: how the decision was made -->
-    <section class="page" data-page="ai" aria-label="AI" hidden>
-      <h1 class="page-title">How the AI decided</h1>
-      <p class="page-sub">The waiting requests in the order the AI would serve them. It decides again after every delivery.</p>
-      <div class="ai-grid">
-        <div id="ai-score" class="ai-score"></div>
-        <div id="ai-table" class="ai-table"></div>
-      </div>
-      <details id="ai-more" class="more-box">
-        <summary>Details: trip times, the optimizer's costs and why</summary>
-        <div id="ai-why" class="ai-why"></div>
-      </details>
-    </section>
-
-    <!-- History: totals, alerts and what happened, one card per delivery -->
-    <section class="page" data-page="history" aria-label="History" hidden>
-      <h1 class="page-title">What happened</h1>
-      <div id="hist-kpis" class="kpis"></div>
-      <div id="alerts" class="alerts"></div>
-      <div id="feed" class="feed"></div>
-    </section>
-
-    <!-- Setup: simulation or real factory, device keys, the track -->
+    <!-- Setup (home): how the factory runs, its devices and its track -->
     <section class="page" data-page="setup" aria-label="Setup" hidden>
       <h1 class="page-title">Setup</h1>
-      <p class="page-sub">Choose what this website runs: the simulation or your real factory. Connect the real
-        car and stations with their keys, and draw your own track.</p>
+      <p class="page-sub">Build your factory here, then press Start: draw the track, connect the real car and
+        stations with their keys, and choose how it runs.</p>
       <div id="setup-note"></div>
       <div class="setup-grid">
         <section class="ctl" aria-labelledby="mode-title">
-          <h3 id="mode-title">Factory mode</h3>
+          <h3 id="mode-title">How it runs</h3>
           <div id="setup-mode"></div>
         </section>
         <section class="ctl" aria-labelledby="dev-title">
@@ -131,6 +117,71 @@
         <div id="setup-track"></div>
         <div id="editor" hidden></div>
       </section>
+    </section>
+
+    <!-- Map: the factory floor, live, with what Roo is doing and the AI's next choice -->
+    <section class="page" data-page="map" aria-label="Map" hidden>
+      <div class="idle-slot"></div>
+      <div class="now-grid">
+        <div class="now-left">
+          <div id="roo-buddy" class="roo-spot"></div>
+          <div id="hero" class="hero"><p class="waiting"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>Roo is waiting for the AI…</p></div>
+          <div id="next" class="next"></div>
+        </div>
+        <div class="floor-card">
+          <div class="floor-head">
+            <span id="floor-title">Factory floor</span>
+            <span class="floor-legend"><i class="lg route"></i>route <i class="lg later"></i>after pickup <i class="lg blk"></i>blocked</span>
+          </div>
+          <div id="slot-map" class="map-slot"></div>
+        </div>
+      </div>
+      <div id="map-controls" class="controls map-controls"></div>
+    </section>
+
+    <!-- Stations: stock at every station and in the warehouse, and the play controls -->
+    <section class="page" data-page="stations" aria-label="Stations" hidden>
+      <h1 class="page-title">Stations</h1>
+      <p class="page-sub">What every station has left, measured by its load cells. The line shows the safety level.</p>
+      <div class="idle-slot"></div>
+      <div id="station-list" class="station-grid"></div>
+      <h2 class="section-title"><span>Play</span></h2>
+      <p class="page-sub play-sub">Change what the AI sees, then watch it react on the <a href="#map">Map</a>.</p>
+      <div id="controls" class="controls"></div>
+      <h2 class="section-title"><span>Warehouse</span></h2>
+      <div id="warehouse" class="warehouse"></div>
+    </section>
+
+    <!-- History: totals, alerts and what happened, one card per delivery -->
+    <section class="page" data-page="history" aria-label="History" hidden>
+      <h1 class="page-title">What happened</h1>
+      <div class="idle-slot"></div>
+      <div id="hist-kpis" class="kpis"></div>
+      <div id="alerts" class="alerts"></div>
+      <div id="feed" class="feed"></div>
+    </section>
+
+    <!-- AI (under Extra): why the AI, and how it decided -->
+    <section class="page" data-page="ai" aria-label="The AI, explained" hidden>
+      <h1 class="page-title">The AI, explained</h1>
+      <div class="ai-explain">
+        <div><b>The examiner</b><p>An exact optimizer tries every possible order of the deliveries, so it always
+          finds the best one. But the number of orders explodes: 7 requests have 5,040 orders, 10 have 3.6 million,
+          15 have 1.3 trillion. It is far too slow for a real factory.</p></div>
+        <div><b>The AI</b><p>A machine-learning ranker learned from thousands of the examiner's answers. It decides
+          in about 40 ms, however many requests wait, and picks the same first delivery about 9 times in 10.</p></div>
+        <div><b>This page</b><p>A real factory would run only the AI. Here the examiner also checks every decision
+          live, to prove the AI is almost as good as perfect.</p></div>
+      </div>
+      <div class="idle-slot"></div>
+      <div class="ai-grid">
+        <div id="ai-score" class="ai-score"></div>
+        <div id="ai-table" class="ai-table"></div>
+      </div>
+      <details id="ai-more" class="more-box">
+        <summary>Details: trip times, the examiner's costs and why</summary>
+        <div id="ai-why" class="ai-why"></div>
+      </details>
     </section>
   </main>
 

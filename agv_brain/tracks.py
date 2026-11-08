@@ -61,6 +61,14 @@ def slug(name: str) -> str:
     return s
 
 
+def taken(name: str) -> bool:
+    """A saved track already uses this name (saving would replace it)."""
+    try:
+        return (TRACKS_DIR / f"{slug(name)}.yaml").exists()
+    except ValueError:
+        return False
+
+
 def save(name: str, raw: dict) -> str:
     """Write a track drawn on the website; returns its id."""
     track_id = slug(name)
