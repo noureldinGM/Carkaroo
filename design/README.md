@@ -59,7 +59,7 @@ Taglines (one per piece):
 
 ### Roo, the main character
 
-Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, the logo's eyes and Roo on the Now page show it, and Roo says one short line:
+Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, the logo's eyes and Roo on the Map page show it, and Roo says one short line:
 
 | Mood | When |
 | --- | --- |
@@ -73,7 +73,7 @@ Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-mood
 | Worried | a station runs out less than a minute after Roo could get there |
 | Driving | on a task |
 | Happy | everything is stocked |
-| Curious | you just changed something in Try it (on the Now page) |
+| Curious | you just changed something with the play controls (Stations or Map page) |
 
 You can play with Roo: **tap** (boop), **tap 5 times** (dizzy), **hold** (revs the engine, then zooms off and back), **drag** (it rides along and rolls back), **rub it with the mouse** (it giggles). The logo **winks** when clicked. Left alone, Roo looks around, hums, stretches, yawns after 30 s and naps after a minute; it looks for you when the pointer leaves the page. A **Refilled** press gets hearts. In the serious moods (offline, blocked, a line stopped) Roo doesn't play: it answers plainly. Moods only move the eyes, the antenna and small effects; the car is never redrawn. "Reduce motion" turns the animations off.
 

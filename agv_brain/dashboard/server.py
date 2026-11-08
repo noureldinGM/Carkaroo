@@ -9,14 +9,21 @@ so it works the same for the simulation and for the real car over MQTT.
     POST /api/refill       {"material": "A"}  the warehouse rack was restocked
     POST /api/sim          simulation controls (obstacle, stock), simulation only
 
-With an `app` (agv_brain.app.App) it also serves the Setup page:
+With an `app` (agv_brain.app.App) it also serves the login, Start and Setup pages:
+    GET  /api/factories            the factories made so far (names only)
+    POST /api/login                {"name": "Exhibit Factory"}  open or make a factory
+    POST /api/logout               back to the login page (stops the factory)
+    POST /api/run                  {"mode": "sim", "speed": 8}  start the factory
+    POST /api/stop                 stop it
     GET  /api/setup                mode, track, devices (keys only for the laptop itself)
     GET  /api/track/<id>           a track, for the editor
-    POST /api/mode                 {"mode": "real_car", "track": "my-track", "speed": 8}
+    POST /api/mode                 {"mode": "real_car", "track": "my-track", "speed": 8}  (restarts it if running)
     POST /api/device/<id>/key      a new key for a device
     POST /api/track/validate       {"track": {...}} -> problems
     POST /api/track/save           {"name": "My track", "track": {...}}
 Changes are only accepted from the laptop itself, never from another device on the Wi-Fi.
+Requests, refills and simulation controls are checked against the factory (known station,
+material and line; numbers in range) and refused with a reason in plain words.
 
 Security (see docs/security.md):
   * POSTs must be JSON (Content-Type: application/json) and, when the browser sends an
@@ -109,6 +116,65 @@ def layout_json(ctx: Context) -> dict:
             "dock": s.car.dock, "warehouse_low_boxes": s.automation.warehouse_low_boxes}
 
 
+def _num(v, lo: float, hi: float, what: str) -> float:
+    """A number from a request, or ValueError with a reason in plain words."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v:
+        raise ValueError(f"{what} must be a number.")
+    if not lo <= v <= hi:
+        raise ValueError(f"{what} must be from {lo:g} to {hi:g}.")
+    return float(v)
+
+
+def check_request(body: dict, layout: dict, state: dict | None) -> dict:
+    """A manual delivery request: a station that uses the material, not already asked for."""
+    st, m = body.get("station"), body.get("material")
+    station = layout["stations"].get(st) if isinstance(st, str) else None
+    if station is None:
+        raise ValueError("Choose a station of this factory.")
+    if not isinstance(m, str) or m not in station["materials"]:
+        raise ValueError(f"{station['name']} does not use that material.")
+    for r in (state or {}).get("requests") or []:
+        if r.get("station") == st and r.get("material") == m:
+            raise ValueError(f"{m} for {station['name']} is already asked for: the AI has it in its list.")
+    return {"material": m, "station": st}
+
+
+def check_refill(body: dict, layout: dict) -> dict:
+    m = body.get("material")
+    if not isinstance(m, str) or m not in layout["materials"]:
+        raise ValueError("Choose a material of this factory.")
+    msg = {"material": m}
+    if body.get("units") is not None:
+        msg["units"] = int(_num(body["units"], 0, 100_000, "The number of units"))
+    return msg
+
+
+def check_sim(body: dict, layout: dict, state: dict | None) -> dict:
+    """Simulation controls (see agv_brain/sim_devices.py), with every value checked."""
+    cmd = body.get("cmd")
+    if cmd == "clear_obstacles":
+        return {"cmd": cmd}
+    if cmd == "set_battery":
+        return {"cmd": cmd, "value": _num(body.get("value"), 0, 100, "The battery")}
+    if cmd == "obstacle":
+        edge = body.get("edge")
+        lines = {tuple(sorted(e)) for e in layout["edges"]}
+        if not (isinstance(edge, list) and len(edge) == 2 and all(isinstance(x, str) for x in edge)
+                and tuple(sorted(edge)) in lines):
+            raise ValueError("Choose a line of the track.")
+        return {"cmd": cmd, "edge": edge, "duration_s": _num(body.get("duration_s", 60), 1, 600, "The time")}
+    if cmd == "set_stock":
+        st, m = body.get("station"), body.get("material")
+        station = layout["stations"].get(st) if isinstance(st, str) else None
+        if station is None or not isinstance(m, str) or m not in station["materials"]:
+            raise ValueError("Choose a station and one of its materials.")
+        mats = (((state or {}).get("stations") or {}).get(st) or {}).get("materials") or {}
+        cap = (mats.get(m) or {}).get("capacity", 1000)
+        return {"cmd": cmd, "station": st, "material": m,
+                "stock": _num(body.get("stock"), 0, cap, f"The stock (it holds {cap:g})")}
+    raise ValueError("Unknown simulation control.")
+
+
 class DashboardServer:
     def __init__(self, bus, ctx: Context, host: str = "127.0.0.1", port: int = 8050,
                  sim_controls: bool = False, app=None):
@@ -170,14 +236,20 @@ class DashboardServer:
                         data = {"state": server.state, "decision": server.decision}
                     if app:
                         parts = app.sim_parts
+                        if not app.running:          # idle: the page shows Start, never an old state
+                            data.update(state=None, decision=None)
                         data.update(layout=app.layout, layout_version=app.layout_version,
                                     sim=parts["car"] or parts["stations"], sim_parts=parts,
-                                    mode={"id": app.mode, "name": app.mode_name}, setup=True)
+                                    mode={"id": app.mode, "name": app.mode_name}, setup=True,
+                                    running=app.running, factory=app.factory_info(), local=self.local)
                     else:
                         data.update(layout=server.layout, layout_version=0, sim=server.sim_controls,
                                     sim_parts={"car": server.sim_controls, "stations": server.sim_controls},
-                                    mode=None, setup=False)
+                                    mode=None, setup=False, running=True, factory=None, local=self.local)
                     return self._json(200, data)
+                if app and path == "/api/factories":
+                    from agv_brain import factories
+                    return self._json(200, {"factories": factories.list_factories(), "current": app.factory_info()})
                 if app and path == "/api/setup":
                     return self._json(200, app.setup(self.local))
                 if app and path.startswith("/api/track/"):
@@ -216,23 +288,31 @@ class DashboardServer:
                     return self._send(400, b'{"error": "bad JSON"}')
                 if not isinstance(body, dict):
                     return self._send(400, b'{"error": "send a JSON object"}')
-                if self.path == "/api/request":
-                    server.bus.publish(P.AI_REQUEST, {"material": body.get("material"),
-                                                      "station": body.get("station")}, qos=1)
-                    return self._send(200, b'{"ok": true}')
-                if self.path == "/api/refill":
-                    msg = {"material": body.get("material")}
-                    if body.get("units") is not None:
-                        msg["units"] = body["units"]
-                    server.bus.publish(P.WAREHOUSE_REFILL, msg, qos=1)
-                    return self._send(200, b'{"ok": true}')
-                if server.app and self.path.startswith(("/api/mode", "/api/device/", "/api/track/")):
+                app = server.app
+                if app and (self.path in ("/api/login", "/api/logout", "/api/run", "/api/stop", "/api/mode")
+                            or self.path.startswith(("/api/device/", "/api/track/"))):
                     return self._setup_post(body)
-                if self.path == "/api/sim":
-                    if not (server.app.sim_parts["car"] or server.app.sim_parts["stations"]
-                            if server.app else server.sim_controls):
-                        return self._send(403, b'{"error": "simulation controls are off"}')
-                    server.bus.publish(P.SIM_CONTROL, body)
+                if self.path in ("/api/request", "/api/refill", "/api/sim"):
+                    if app and not app.running:
+                        return self._json(409, {"error": "The factory is not running. Press Start first."})
+                    layout = app.layout if app else server.layout
+                    parts = app.sim_parts if app else {"car": server.sim_controls, "stations": server.sim_controls}
+                    with server._lock:
+                        state = server.state
+                    try:
+                        if self.path == "/api/request":
+                            server.bus.publish(P.AI_REQUEST, check_request(body, layout, state), qos=1)
+                        elif self.path == "/api/refill":
+                            server.bus.publish(P.WAREHOUSE_REFILL, check_refill(body, layout), qos=1)
+                        else:
+                            if not (parts["car"] or parts["stations"]):
+                                return self._json(403, {"error": "simulation controls are off"})
+                            msg = check_sim(body, layout, state)
+                            if not parts["stations" if msg["cmd"] == "set_stock" else "car"]:
+                                return self._json(403, {"error": "That part is real, not simulated."})
+                            server.bus.publish(P.SIM_CONTROL, msg)
+                    except ValueError as exc:
+                        return self._json(400, {"error": str(exc)})
                     return self._send(200, b'{"ok": true}')
                 self._send(404, b'{"error": "not found"}')
 
@@ -247,9 +327,23 @@ class DashboardServer:
                 if not self.local:
                     return self._json(403, {"error": "Changes can only be made on the laptop itself."})
                 try:
+                    if self.path == "/api/login":
+                        return self._json(200, {"ok": True, "factory": app.login(body.get("name"))})
+                    if self.path == "/api/logout":
+                        app.logout()
+                        return self._json(200, {"ok": True})
+                    if not app.factory and self.path in ("/api/run", "/api/mode", "/api/track/save"):
+                        return self._json(409, {"error": "Open a factory on the login page first."})
+                    if self.path == "/api/run":
+                        app.run(body.get("mode"), body.get("speed"))
+                        return self._json(200, {"ok": True, "mode": app.mode, "running": app.running})
+                    if self.path == "/api/stop":
+                        app.stop_session()
+                        return self._json(200, {"ok": True, "running": False})
                     if self.path == "/api/mode":
-                        app.switch(body.get("mode"), body.get("track"), body.get("speed"))
-                        return self._json(200, {"ok": True, "mode": app.mode, "track": app.track})
+                        app.configure(body.get("mode"), body.get("track"), body.get("speed"))
+                        return self._json(200, {"ok": True, "mode": app.mode, "track": app.track,
+                                                "running": app.running})
                     if self.path.startswith("/api/device/") and self.path.endswith("/key"):
                         device = self.path.split("/")[3]
                         return self._json(200, {"ok": True, "key": app.new_key(device)})
@@ -258,9 +352,14 @@ class DashboardServer:
                         problems = tracks.validate(raw, app.settings)
                         if problems["errors"]:
                             return self._json(400, {"error": "Fix the problems first.", **problems})
+                        name = body.get("name") or ""
+                        if tracks.taken(name) and not body.get("overwrite"):
+                            return self._json(409, {"error": f'A track named "{name}" already exists.', "exists": True})
                         return self._json(200, {"ok": True, "id": tracks.save(body.get("name") or "", raw)})
-                except (ValueError, KeyError, FileNotFoundError) as exc:
-                    return self._json(400, {"error": str(exc).strip("'")})
+                except KeyError as exc:
+                    return self._json(400, {"error": f"Unknown device {exc}."})
+                except (ValueError, FileNotFoundError) as exc:
+                    return self._json(400, {"error": str(exc)})
                 except Exception as exc:
                     traceback.print_exc()
                     return self._json(500, {"error": f"Something went wrong: {exc}"})
@@ -269,6 +368,11 @@ class DashboardServer:
         self.httpd = ThreadingHTTPServer((host, port), Handler)
         self.url = f"http://{'localhost' if host in ('127.0.0.1', '0.0.0.0') else host}:{port}"
         threading.Thread(target=self.httpd.serve_forever, name="dashboard", daemon=True).start()
+
+    def clear(self) -> None:
+        """Forget the last state and decision (a factory stopped or is starting)."""
+        with self._lock:
+            self.state = self.decision = None
 
     def _on_state(self, topic: str, msg: dict) -> None:
         with self._lock:

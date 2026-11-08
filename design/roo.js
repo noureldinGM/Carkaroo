@@ -304,7 +304,7 @@
                 say: (c) => c.carrying ? `Carrying ${c.material} to ${c.station}.` : c.charge ? "Going to the dock to charge." : `Going to pick up ${c.material} for ${c.station}.` },
     happy:    { name: "Happy",    when: "Everything is stocked and nothing is wrong.",
                 say: () => pick(["All stocked up. I'm taking a breather.", "Every line is running. Nice!", "Nothing to carry right now."]) },
-    curious:  { name: "Curious",  when: "In Try it (on the Now page), right after you change an input.",
+    curious:  { name: "Curious",  when: "Right after you change something with the play controls.",
                 say: () => pick(["Ooh, what did you change?", "Let's see what the AI does with that."]) },
   };
   // first match wins, top to bottom

@@ -21,7 +21,7 @@ const TrackEditor = (() => {
   let drag = null;
   let hover = null;         // snapped cursor position in cm
   let history = [];
-  let dirty = false;
+  let saved = "";           // the track as it was opened or last saved (to know if it changed)
   let open = false;
   let problems = { errors: [], warnings: [] };
   let checkTimer = 0;
@@ -29,7 +29,8 @@ const TrackEditor = (() => {
 
   // ---------- model ----------
   const snapshot = () => JSON.stringify(track);
-  function remember() { history.push(snapshot()); if (history.length > 100) history.shift(); dirty = true; }
+  function remember() { history.push(snapshot()); if (history.length > 100) history.shift(); }
+  const dirty = () => snapshot() !== saved;
   function undo() {
     if (!history.length) return;
     track = JSON.parse(history.pop()); from = null; selEdge = null;
@@ -241,7 +242,7 @@ const TrackEditor = (() => {
       const n = track.nodes[drag.id];
       if (n.x !== p.x || n.y !== p.y) {
         if (nodeAt(p.x, p.y)) return;
-        if (!drag.moved) { history.push(drag.start); drag.moved = true; dirty = true; }
+        if (!drag.moved) { history.push(drag.start); drag.moved = true; }
         n.x = p.x; n.y = p.y;
         hover = p; draw(); scheduleCheck();
       }
@@ -281,13 +282,18 @@ const TrackEditor = (() => {
     const name = el.name.value.trim();
     if (!name) { el.nameErr.textContent = "Give the track a name first."; el.name.focus(); return; }
     el.nameErr.textContent = "";
-    const r = await postJson("/api/track/save", { name, track });
+    let r = await postJson("/api/track/save", { name, track });
+    if (!r.ok && r.data.exists) {
+      if (!confirm(`A track named "${name}" already exists. Replace it with this one?`)) return;
+      r = await postJson("/api/track/save", { name, track, overwrite: true });
+    }
     if (!r.ok) { toast(r.data.error || "Could not save the track."); return; }
-    dirty = false;
+    saved = snapshot();
     if (!andUse) { toast(`Saved "${name}". Choose it under Factory mode to use it.`); return; }
     el.use.disabled = true; el.use.textContent = "Switching…";
-    const m = await postJson("/api/mode", { mode: setup.mode, track: r.data.id });
+    const m = await postJson("/api/mode", { track: r.data.id });
     el.use.textContent = "Save and use it";
+    el.use.disabled = false;
     toast(m.ok ? `Saved and now using "${name}".` : (m.data.error || "Saved, but could not switch to it."));
     if (m.ok) close(true);
   }
@@ -344,7 +350,7 @@ const TrackEditor = (() => {
   document.addEventListener("keydown", keys);
 
   function close(force) {
-    if (!force && dirty && !confirm("Close the editor without saving your changes?")) return;
+    if (!force && dirty() && !confirm("Close the editor without saving your changes?")) return;
     open = false;
     $("#editor").hidden = true;
     $("#setup-track").hidden = false;
@@ -357,8 +363,9 @@ const TrackEditor = (() => {
     open(raw, name) {
       track = { nodes: JSON.parse(JSON.stringify(raw.nodes || {})), edges: (raw.edges || []).map((e) => [...e]) };
       for (const n of Object.values(track.nodes)) { n.x = Number(n.x); n.y = Number(n.y); }
-      history = []; dirty = false; from = null; selEdge = null; hover = null;
+      history = []; from = null; selEdge = null; hover = null;
       open = true;
+      saved = snapshot();
       build();
       el.name.value = name || "";
       $("#setup-track").hidden = true;

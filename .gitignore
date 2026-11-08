@@ -9,6 +9,8 @@ data/generated/
 
 # Device keys and the website's saved mode (secret / this laptop only)
 config/*.local.yaml
+# Factories made on the website's login page (this laptop only)
+config/factories/
 
 # Other secrets
 .env

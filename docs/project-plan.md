@@ -55,7 +55,7 @@ Capstone requirements this plan covers (G12 2026/2027, "IT and AI Applications")
 - [ ] Obstacle tests with re-routing
 
 ## Phase 5: Dashboard (car tracking): mostly done early
-- [x] Live web dashboard on the laptop ([dashboard.md](dashboard.md)), five simple pages (Now with Try it, Stations, AI, History, Setup) in a robot-kit look:
+- [x] Live web dashboard on the laptop ([dashboard.md](dashboard.md)), a login page (the factory's name), then Setup (home), Map, Stations (with the play controls) and History, and the AI explained under Extra; nothing runs until Start, in a robot-kit look:
   - the AI's choice in one sentence, why, and whether it is the best possible choice
   - the queue in the AI's order, plus the detailed numbers on demand
   - live car position on the factory map, battery and state, with the route highlighted
