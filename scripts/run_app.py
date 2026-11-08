@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from agv_brain.app import App  # noqa: E402
+from agv_brain.broker import port_in_use  # noqa: E402
 from agv_brain.dispatcher import POLICIES  # noqa: E402
 
 
@@ -29,10 +30,18 @@ def main() -> None:
                     help="broker port (default from config/mqtt.yaml, 1883); the firmware must use the same")
     args = ap.parse_args()
 
+    # one copy at a time: a second one would share the port and the browser could show the old copy
+    if port_in_use(args.port):
+        print(f"The Carkaroo website is already running at http://localhost:{args.port} (another copy).\n"
+              "Open that one, or stop it with Ctrl+C in its window and start this again.")
+        sys.exit(1)
+
     app = App.start(host=args.host, port=args.port, policy=args.policy, mqtt_port=args.mqtt_port)
     b = app.broker
     if b:
         where = ", ".join(f"{a}:{b.port}" for a in app.setup(True)["broker"]["addresses"]) or f"port {b.port}"
+        if b.cleared:
+            print("Stopped a broker left over from an earlier run (an app that was closed without Ctrl+C).")
         print(f"MQTT broker with device keys on {where}" + (" (cloud bridge on)" if b.bridged else ""))
     else:
         print(f"No MQTT broker, so only the simulation can run:\n  {app.broker_error}")

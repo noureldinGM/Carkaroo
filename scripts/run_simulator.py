@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from agv_brain.broker import port_in_use  # noqa: E402
 from agv_brain.practice_server import PracticeServer  # noqa: E402
 
 
@@ -24,6 +25,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", type=int, default=8060)
     args = ap.parse_args()
+    if port_in_use(args.port):       # one copy at a time
+        print(f"The Carkaroo Simulator is already running at http://localhost:{args.port} (another copy).\n"
+              "Open that one, or stop it with Ctrl+C in its window and start this again.")
+        sys.exit(1)
     server = PracticeServer(port=args.port)
     print(f"Carkaroo Simulator: {server.url}  (the Carkaroo website runs separately, scripts/run_app.py)")
     print("Press Ctrl+C to stop.", flush=True)
