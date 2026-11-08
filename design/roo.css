@@ -214,6 +214,60 @@
 [data-act] [class^="fx-"]:not(.fx-speed):not(.fx-stars):not(.fx-hearts):not(.fx-zzz):not(.fx-note) { opacity: 0; }
 [data-act]:not([data-act="nap"]) .fx-zzz { opacity: 0; }
 
+/* delivery (the end of the secret lap): ^ ^ eyes, a hop, confetti and stars */
+[data-act="delivery"] { --lid: 1; }
+[data-act="delivery"] .happy { opacity: 1; }
+[data-act="delivery"] .acting.car { animation: hop .5s var(--ease) 2; }
+[data-act="delivery"] .fx-confetti { opacity: 1; animation: confetti 1.2s ease-out both; }
+[data-act="delivery"] .fx-stars { opacity: 1; animation: pulse .5s ease-in-out 4; }
+[data-act="delivery"] .antenna { animation: wiggle .4s ease-in-out 3; }
+[data-act="delivery"] .fx-confetti { transform-box: fill-box; }
+[data-act="lap"] { --lid: .25; --tl: 12deg; --tr: -12deg; --px: 3.5; }
+.car .spoke { fill: none; stroke: #121314; stroke-width: 1.2; stroke-linecap: round; }
+
+/* ---------- Roo the pet: a lane along the bottom of the window (Roo.pet in roo.js) ---------- */
+.roo-pet { --lane: 10px; position: fixed; inset: auto 0 0 0; height: 0; z-index: 40; pointer-events: none; }
+/* the lane: a soft fade of the page color with a dashed line, so Roo has its own road */
+.pet-lane { position: fixed; left: 0; right: 0; bottom: 0; height: 26px; pointer-events: none;
+  background: linear-gradient(to top, var(--paper) 30%, transparent); }
+.pet-lane::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: calc(var(--lane) - 2px); height: 2px;
+  background: repeating-linear-gradient(90deg, var(--line-2) 0 16px, transparent 16px 28px); }
+.pet-rider { position: fixed; left: 0; bottom: var(--lane); pointer-events: auto; transform: translate3d(-240px, 0, 0);
+  transform-origin: 50% 50%; will-change: transform; }
+.roo-pet .roo-buddy { --roo-w: 92px; display: block; position: relative; }
+.roo-pet .roo-body { display: block; border-radius: 10px;
+  transform: translateX(var(--dx, 0px)) rotate(var(--lean, 0deg)) scaleX(var(--face, 1)); }
+.roo-pet .car { display: block; }
+/* the bubble floats above Roo and follows it; roo.js keeps it inside the window (--say-x, --tail-x) */
+.roo-pet .roo-say { position: absolute; left: var(--say-x, 0px); bottom: calc(100% + 12px); width: max-content;
+  min-width: 12ch; max-width: min(30ch, calc(100vw - 24px)); font-size: 13px; padding: 8px 12px; pointer-events: none;
+  transform-origin: var(--tail-x, 50%) 100%; transition: opacity .22s, transform .3s var(--ease); }
+.roo-pet .roo-say::before { left: var(--tail-x, 50%); top: auto; bottom: -10px; margin: 0 0 0 -8px;
+  transform: rotate(-45deg) skew(10deg, 10deg); }
+.roo-pet .roo-say.pop { animation: say-pop .3s var(--ease); }
+.roo-pet[data-drive] .roo-say, .roo-pet[data-lap] .roo-say, .roo-pet[data-hidden] .roo-say {
+  opacity: 0; transform: translateY(6px) scale(.9); }
+/* driving: the wheels turn, speed lines, a quick bob */
+.roo-pet .roo-face .wheel { transform-box: fill-box; transform-origin: center; }
+.roo-pet[data-drive] .wheel, .roo-pet[data-lap] .wheel { animation: wheelspin .38s linear infinite; }
+.roo-pet[data-drive] .fx-speed, .roo-pet[data-lap] .fx-speed { opacity: 1; animation: speed .3s linear infinite; }
+.roo-pet[data-drive] .bob, .roo-pet[data-lap] .bob { animation: bump .25s ease-in-out infinite; }
+/* the box on Roo's back during the lap */
+.pet-cargo { position: absolute; left: 30%; bottom: 52%; z-index: 1; display: none; width: 24px; height: 24px; font-size: 15px;
+  box-shadow: 0 0 0 2px var(--card); }
+.roo-pet[data-lap] .pet-cargo { display: inline-grid; animation: cargo-on .5s var(--ease) both; }
+.roo-pet:not([data-lap]) .pet-cargo { display: none; }
+@keyframes wheelspin { to { transform: rotate(360deg); } }
+@keyframes say-pop { 0% { transform: translateY(4px) scale(.92); opacity: .4; } 100% { transform: none; opacity: 1; } }
+@keyframes cargo-on { 0% { transform: translateY(-40px) scale(.4); opacity: 0; } 60% { transform: translateY(4px) scale(1.05); opacity: 1; } 100% { transform: none; } }
+@media (max-width: 600px) {
+  .roo-pet .roo-buddy { --roo-w: 72px; }
+  .roo-pet .roo-say { font-size: 12px; max-width: min(24ch, calc(100vw - 24px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-rider, .roo-pet .roo-say { transition: none !important; animation: none !important; }
+}
+
 /* ---------- motion ---------- */
 @keyframes squash { 0% { transform: none; } 25% { transform: translateY(2%) scale(1.06, .92); } 55% { transform: translateY(-12%) scale(.96, 1.05); } 80% { transform: translateY(0) scale(1.03, .97); } 100% { transform: none; } }
 @keyframes giggle { 50% { transform: rotate(-3deg) translateY(-2%); } }

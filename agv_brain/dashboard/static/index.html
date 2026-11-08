@@ -43,7 +43,6 @@
         <summary>Extra</summary>
         <div class="extra-menu">
           <a href="#ai" data-tab="ai">The AI, explained</a>
-          <button type="button" data-lap>Roo's lap</button>
           <a href="/design/">Design system</a>
         </div>
       </details>
@@ -56,7 +55,7 @@
         <span id="link" class="link off">Connecting…</span>
       </div>
     </div>
-    <div class="finish" aria-hidden="true"></div>
+    <div class="finish" aria-hidden="true" title="&#127937; ?"></div>
   </header>
 
   <main>
@@ -200,14 +199,8 @@
     <a href="/design/" style="margin-left:auto">Design system</a>
   </footer>
 
-  <!-- Roo lives in this corner on every page; it rolls along when you change page, and takes a lap with a box -->
-  <aside id="roo-dock" class="roo-dock" aria-label="Roo">
-    <div class="roo-ride">
-      <span class="roo-cargo" aria-hidden="true"></span>
-      <div id="roo-buddy"></div>
-    </div>
-    <button id="roo-lap" class="roo-lap-btn" type="button" data-lap title="Roo's lap" aria-label="Roo's lap: Roo drives across the screen with a box">&#127937;</button>
-  </aside>
+  <!-- Roo the pet lives in a lane along the bottom of every page (design/roo.js: Roo.pet) -->
+  <aside id="roo-pet" aria-label="Roo"></aside>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

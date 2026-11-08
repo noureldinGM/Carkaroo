@@ -3,6 +3,7 @@
 //
 //   Roo.logo(el)                 -> the "Carkar" + eyes logo (the two o's are Roo's eyes)
 //   Roo.buddy(el)                -> Roo the car with a speech bubble
+//   Roo.pet(el, opts)            -> Roo the live pet in a lane along the bottom of the window (see pet() below)
 //   x.set("worried", "Hurry!")   -> change the mood (and the line in the bubble)
 //   Roo.read(snapshot, memory)   -> { mood, say } from /api/snapshot, see RULES below
 //
@@ -49,7 +50,7 @@
   }
 
   // ---------- Roo the car (side view, from logo/roo-cartoon.svg) with effects and a speech bubble ----------
-  function buddy(el, opts = {}) {
+  function buddy(el, opts = {}, hooks) {
     el.classList.add("roo-buddy");
     el.innerHTML = `<span class="roo-body" tabindex="0" role="button" aria-label="Roo, the Carkaroo car. Tap, hold or drag me.">
       <svg class="roo-face car" viewBox="-17 -15 76 48" aria-hidden="true">
@@ -64,8 +65,8 @@
           <path class="fx-tear" d="M33.6 10.2 q -1.1 1.9 0 2.6 q 1.1 -0.7 0 -2.6 z"/>
           <path class="fx-drop" d="M44.6 -0.6 q -1.6 2.6 0 3.6 q 1.6 -1 0 -3.6 z"/>
         </g>
-        <g class="wheel"><circle class="tire" cx="11" cy="22" r="6.4"/><circle class="hub" cx="11" cy="22" r="3"/></g>
-        <g class="wheel"><circle class="tire" cx="29" cy="22" r="6.4"/><circle class="hub" cx="29" cy="22" r="3"/></g>
+        <g class="wheel"><circle class="tire" cx="11" cy="22" r="6.4"/><circle class="hub" cx="11" cy="22" r="3"/><path class="spoke" d="M11 19.4 V24.6"/></g>
+        <g class="wheel"><circle class="tire" cx="29" cy="22" r="6.4"/><circle class="hub" cx="29" cy="22" r="3"/><path class="spoke" d="M29 19.4 V24.6"/></g>
         <text class="fx-bang" x="47" y="-3">!</text>
         <g class="fx-zzz"><text x="44" y="-2">z</text><text x="48" y="-6">z</text><text x="52.5" y="-10.5">Z</text></g>
         <path class="fx-bolt" d="M47 -9 l -3.4 6 h 2.8 l -1.6 5.4 l 4.6 -7 h -2.9 l 1.9 -4.4 z"/>
@@ -81,7 +82,7 @@
       </svg></span>
       <p class="roo-say" aria-live="polite"></p>`;
     const f = face(el, el.querySelector("svg"), opts);
-    interact(f, el.querySelector(".roo-body"));
+    interact(f, el.querySelector(".roo-body"), hooks);
     return f;
   }
 
@@ -145,9 +146,10 @@
   };
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-  function interact(f, body) {
+  // hooks (Roo.pet): clamp(dx) limits a drag, drop(dx) keeps Roo where it was let go
+  function interact(f, body, hooks = {}) {
     let down = null, taps = [], rub = 0, rubSince = 0;
-    const clampX = (x) => Math.max(-120, Math.min(160, x));
+    const clampX = hooks.clamp || ((x) => Math.max(-120, Math.min(160, x)));
     body.addEventListener("pointerdown", (ev) => {
       lastInput = Date.now();
       down = { x: ev.clientX, y: ev.clientY, moved: false, held: false };
@@ -184,7 +186,8 @@
       clearTimeout(down.hold);
       const d = down; down = null;
       body.classList.remove("dragging");
-      if (d.moved) {                       // let go: roll back home
+      if (d.moved) {                       // let go: roll back home (the pet stays where it was dropped)
+        if (hooks.drop) hooks.drop(parseFloat(body.style.getPropertyValue("--dx")) || 0);
         body.style.setProperty("--dx", "0px");
         if (!f.serious()) f.play("drop", 1300, pick(LINES.drop)); else f.stop();
       } else if (d.held) {                 // held: zoom off and come back
@@ -272,6 +275,238 @@
   function logoTouch(f) {
     f.el.addEventListener("pointerenter", () => { if (!f.serious() && !f.act) f.play("wide", 900); });
     f.el.addEventListener("click", () => { if (!f.serious()) f.play("wink", 700); });
+  }
+
+  // ---------- Roo the pet: lives in a lane along the bottom of the window, on every page ----------
+  //   const pet = Roo.pet(el, { secret: ".top .finish", cargo: () => ({ letter: "B", name: "Plastic housings" }) })
+  //   pet.set(mood, line)       the live mood and line (a new line shows at most every 5 s, unless the mood changes)
+  //   pet.show() / pet.hide()   drive in from the left edge / drive away (never pops in or out)
+  //   pet.visit(element)        drive under an element (the open tab)
+  //   pet.fresh()               the next line shows at once (a new page)
+  //   pet.arriveFrom(rect)      come from another Roo on the page (the big one on the login page)
+  //   pet.lap()                 the secret: a box on its back, one lap around the window, back to its spot
+  // It wanders now and then, comes closer when the pointer is near the lane, naps when nobody is around,
+  // and parks (no wandering, no jokes) in the serious moods. Drag it to put it anywhere in the lane.
+  function pet(el, opts = {}) {
+    el.classList.add("roo-pet");
+    el.innerHTML = `<div class="pet-lane" aria-hidden="true"></div>
+      <div class="pet-rider"><span class="pet-cargo" aria-hidden="true"></span><div class="pet-buddy"></div></div>`;
+    const rider = el.querySelector(".pet-rider"), cargo = el.querySelector(".pet-cargo"), host = el.querySelector(".pet-buddy");
+    let x = 0, hidden = true, lapping = false, driving = false, moveT = 0, wanderT = 0, lineT = 0, lineAt = 0, wanted = null, followAt = 0;
+    const W = () => document.documentElement.clientWidth;
+    const carW = () => host.querySelector(".car").getBoundingClientRect().width || 90;
+    const minX = () => 12, maxX = () => Math.max(12, W() - carW() - 12);
+    const clampX = (v) => Math.max(minX(), Math.min(maxX(), v));
+    const offX = () => -carW() - 60;
+
+    const f = buddy(host, opts, {
+      clamp: (dx) => Math.max(minX() - x, Math.min(maxX() - x, dx)),
+      drop: (dx) => {                          // stay where it was let go
+        const body = host.querySelector(".roo-body");
+        body.style.transition = "none";
+        place(clampX(x + dx));
+        requestAnimationFrame(() => { body.style.transition = ""; fitSay(); });
+      },
+    });
+    const say = host.querySelector(".roo-say");
+
+    function apply() { rider.style.transform = `translate3d(${x}px, 0, 0)`; }
+    function place(nx) {                       // move at once, no animation
+      clearTimeout(moveT); delete el.dataset.drive; driving = false;
+      rider.style.transition = "none"; x = nx; apply();
+      void rider.offsetWidth; rider.style.transition = "";
+    }
+    function currentX() {
+      const t = getComputedStyle(rider).transform;
+      return t && t !== "none" ? new DOMMatrixReadOnly(t).m41 : x;
+    }
+    function turn(dir) { host.style.setProperty("--face", String(dir)); }
+    const busy = () => hidden || lapping || f.serious() || !!host.querySelector(".roo-body.dragging")
+      || (f.act && f.act !== "lookaround") || (typeof document !== "undefined" && document.hidden);
+
+    // drive along the lane; the bubble waits until Roo has parked
+    function driveTo(nx, { speed = 170, then } = {}) {
+      if (lapping) return;
+      nx = clampX(nx);
+      const from = driving ? currentX() : x, dist = Math.abs(nx - from);
+      if (dist < 6) { if (then) then(); return; }
+      if (reduce) { place(nx); fitSay(); if (then) then(); return; }
+      turn(nx < from ? -1 : 1);
+      const s = Math.max(0.45, dist / speed);
+      rider.style.transition = `transform ${s.toFixed(2)}s cubic-bezier(.45, .05, .35, 1)`;
+      x = nx; apply();
+      el.dataset.drive = ""; driving = true;
+      clearTimeout(moveT);
+      moveT = setTimeout(() => {
+        delete el.dataset.drive; driving = false;
+        fitSay();
+        if (then) then();
+      }, s * 1000);
+    }
+
+    // keep the bubble above Roo and inside the window, its tail pointing at Roo
+    function fitSay() {
+      if (!say || !say.textContent) return;
+      const w = carW(), bw = say.offsetWidth, vw = W();
+      let left = w / 2 - bw / 2;
+      if (x + left < 8) left = 8 - x;
+      if (x + left + bw > vw - 8) left = vw - 8 - bw - x;
+      host.style.setProperty("--say-x", `${Math.round(left)}px`);
+      host.style.setProperty("--tail-x", `${Math.round(Math.max(18, Math.min(bw - 18, w / 2 - left)))}px`);
+    }
+    function showLine(mood, line) {
+      clearTimeout(lineT); wanted = null; lineAt = Date.now();
+      f.set(mood, line);
+      if (say) { say.classList.remove("pop"); void say.offsetWidth; say.classList.add("pop"); }
+      fitSay();
+    }
+
+    // wander now and then; look around after parking
+    function wanderSoon() { clearTimeout(wanderT); wanderT = setTimeout(wander, 8000 + Math.random() * 12000); }
+    function wander() {
+      wanderSoon();
+      if (busy() || reduce || el.dataset.drive !== undefined) return;
+      let nx = minX() + Math.random() * (maxX() - minX());
+      if (Math.abs(nx - x) < 140) nx = x + (nx >= x ? 180 : -180);
+      driveTo(nx, { then: () => { if (!busy() && !f.act) f.play("lookaround", 2200); } });
+    }
+    // the pointer near the lane: Roo comes closer (but never under it) and looks up
+    if (typeof document !== "undefined") {
+      document.addEventListener("pointermove", (ev) => {
+        if (ev.pointerType !== "mouse" || busy() || reduce || el.dataset.drive !== undefined) return;
+        if (ev.clientY < innerHeight - 150 || Date.now() - followAt < 2500) return;
+        const w = carW(), mid = x + w / 2, gap = ev.clientX - mid;
+        if (Math.abs(gap) < 170) return;
+        followAt = Date.now();
+        driveTo(ev.clientX - w / 2 - Math.sign(gap) * 140, { speed: 230 });
+      }, { passive: true });
+      addEventListener("resize", () => { if (!hidden && !lapping) { place(clampX(x)); fitSay(); } });
+    }
+
+    const home = () => clampX(W() - carW() - 120);
+    function show() {
+      if (!hidden) return;
+      hidden = false; delete el.dataset.hidden;
+      if (reduce) { place(home()); fitSay(); return; }
+      place(offX()); turn(1);
+      el.dataset.drive = "";                  // the bubble waits until Roo has arrived
+      setTimeout(() => driveTo(home(), { speed: 320 }), 30);
+      wanderSoon();
+    }
+    function hide() {
+      if (hidden) return;
+      hidden = true; el.dataset.hidden = "";
+      clearTimeout(wanderT);
+      if (reduce) { place(offX()); return; }
+      turn(-1);
+      const s = Math.max(0.4, (currentX() - offX()) / 420);
+      rider.style.transition = `transform ${s.toFixed(2)}s cubic-bezier(.5, 0, .75, 0)`;
+      x = offX(); apply();
+    }
+    // from another Roo on the page: grow or shrink from there into the lane
+    function arriveFrom(rect) {
+      if (!rect || !rect.width) { show(); return; }
+      hidden = false; delete el.dataset.hidden;
+      const to = home();
+      place(0);
+      const r0 = rider.getBoundingClientRect(), k = rect.width / carW();
+      place(to);
+      if (reduce || !rider.animate) { fitSay(); wanderSoon(); return; }
+      turn(1);
+      el.dataset.drive = "";
+      rider.animate([
+        { transform: `translate3d(${rect.left - r0.left}px, ${rect.top - r0.top}px, 0) scale(${k.toFixed(3)})`, transformOrigin: "0 0" },
+        { transform: `translate3d(${(rect.left - r0.left + to) / 2}px, ${(rect.top - r0.top) / 2 - 60}px, 0) scale(${((k + 1) / 2).toFixed(3)})`, transformOrigin: "0 0", offset: 0.45 },
+        { transform: `translate3d(${to}px, 0, 0) scale(1)`, transformOrigin: "0 0" },
+      ], { duration: 1100, easing: "cubic-bezier(.45, 0, .3, 1)" }).onfinish = () => { delete el.dataset.drive; fitSay(); };
+      wanderSoon();
+    }
+
+    // the secret lap: right edge up, along the finish strip at the top, down the left edge, home
+    function lap() {
+      if (lapping || hidden) return;
+      const c = opts.cargo ? opts.cargo() : null;
+      const name = c ? c.name : "a box";
+      if (c) { cargo.className = `pet-cargo mat ${c.letter}`; cargo.textContent = c.letter; }
+      if (reduce || !rider.animate) { f.play("love", 2200, `Special delivery: ${name}!`); return; }
+      lapping = true;
+      const start = clampX(driving ? currentX() : x);
+      place(start); turn(1);
+      el.dataset.lap = "";
+      f.play("lap", Infinity, "");
+      const r = rider.getBoundingClientRect(), w = r.width, h = r.height, vw = W(), vh = innerHeight;
+      const strip = opts.secret && document.querySelector(opts.secret);
+      const top = strip ? Math.max(0, strip.getBoundingClientRect().top) : 8;
+      const c0x = r.left - start + w / 2, c0y = r.top + h / 2;          // Roo's centre with no move
+      const R = 34;                                                        // how wide the corners are
+      const pts = [                                                        // centre x, centre y, turn
+        [start + w / 2, c0y, 0],
+        [vw - 10 - w / 2 - R, c0y, 0],
+        [vw - 10 - h / 2, c0y - R, -90],
+        [vw - 10 - h / 2, top + w / 2 + R, -90],
+        [vw - 10 - w / 2 - R, top + h / 2, -180],
+        [10 + w / 2 + R, top + h / 2, -180],
+        [10 + h / 2, top + w / 2 + R, -270],
+        [10 + h / 2, c0y - R, -270],
+        [10 + w / 2 + R, c0y, -360],
+        [start + w / 2, c0y, -360],
+      ];
+      const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]) + 30);
+      const total = seg.reduce((a, b) => a + b, 0);
+      let run = 0;
+      const frames = pts.map((p, i) => {
+        if (i) run += seg[i - 1];
+        return { transform: `translate(${(p[0] - c0x).toFixed(1)}px, ${(p[1] - c0y).toFixed(1)}px) rotate(${p[2]}deg)`,
+          offset: run / total, easing: i === 0 ? "ease-in" : i === pts.length - 2 ? "ease-out" : "linear" };
+      });
+      const anim = rider.animate(frames, { duration: Math.max(3200, Math.min(6500, total / 0.75)) });
+      anim.onfinish = () => {
+        lapping = false; delete el.dataset.lap;
+        place(start);
+        f.play("delivery", 2600, `Special delivery: ${name}!`);
+        setTimeout(fitSay, 30);
+        wanderSoon();
+      };
+    }
+    if (opts.secret && typeof document !== "undefined") {
+      let clicks = [];
+      document.addEventListener("click", (ev) => {
+        if (!ev.target.closest || !ev.target.closest(opts.secret)) return;
+        const now = Date.now();
+        clicks = clicks.filter((t) => now - t < 1500); clicks.push(now);
+        if (clicks.length >= 3) { clicks = []; lap(); }
+        else if (!busy()) f.play("wiggle", 600);             // a hint: Roo noticed
+      });
+    }
+
+    place(offX()); el.dataset.hidden = "";
+    return {
+      el, face: f, show, hide, lap, arriveFrom, driveTo,
+      visit(target) {
+        if (!target || hidden || lapping || host.querySelector(".roo-body.dragging")) return;   // even asleep, Roo rolls along
+        const b = target.getBoundingClientRect();
+        if (b.width) driveTo(b.left + b.width / 2 - carW() / 2, { speed: 300 });
+      },
+      // the next line shows at once (after a page change)
+      fresh() { lineAt = 0; },
+      // a new line at most every 5 s (no flicker), at once when the mood changes
+      set(mood, line) {
+        const changed = mood !== f.mood;
+        if (changed) {
+          showLine(mood, line === undefined ? f.line : line);
+          if (f.serious()) { clearTimeout(wanderT); if (driving) place(currentX()); }
+          else if (!hidden) wanderSoon();
+          return;
+        }
+        if (line === undefined || line === f.line || line === wanted) return;
+        const wait = 5000 - (Date.now() - lineAt);
+        if (wait <= 0) { showLine(mood, line); return; }
+        wanted = line;
+        clearTimeout(lineT);
+        lineT = setTimeout(() => { if (wanted !== null) showLine(f.mood, wanted); }, wait);
+      },
+      play(act, ms, line) { f.play(act, ms, line); setTimeout(fitSay, 0); },
+    };
   }
 
   // which moods blink (the look itself is in roo.css)
@@ -377,5 +612,5 @@
     return { mood, say: memory.say };
   }
 
-  root.Roo = { logo, buddy, read, MOODS, ORDER, poke: (memory) => { memory.curiousUntil = Date.now() + 3500; } };
+  root.Roo = { logo, buddy, pet, read, MOODS, ORDER, poke: (memory) => { memory.curiousUntil = Date.now() + 3500; } };
 })(typeof window !== "undefined" ? window : globalThis);
