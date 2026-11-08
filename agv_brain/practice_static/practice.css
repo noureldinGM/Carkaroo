@@ -12,7 +12,22 @@ body { background: var(--paper); }
 main { max-width: 1240px; margin: 0 auto; padding: 24px 24px 60px; outline: 3px dashed var(--line-2); outline-offset: -10px;
   border-radius: 18px; }
 .mono { font: 13px var(--mono); }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; margin: 16px 0; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; margin: 8px 0 4px; }
+.grid h4 { display: flex; align-items: center; font: italic 700 18px var(--display); margin: 0 0 4px; }
+.grid p { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); }
+/* Connect: one card that folds to a single line once everything is connected */
+.connect-box { margin: 16px 0; }
+.connect-box > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+.connect-box > summary::-webkit-details-marker { display: none; }
+.connect-box > summary h3 { margin: 0; }
+.connect-box > summary::after { content: "Fold"; margin-left: auto; font: 600 12px var(--sans); color: var(--muted); }
+.connect-box:not([open]) > summary::after { content: "Open"; }
+.conn-sum { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.conn-sum.ok { color: var(--good); }
+/* the floor, big, with the devices and the play controls beside it */
+.sim-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: 16px; align-items: start; }
+.side { display: grid; gap: 16px; }
+.floor { position: sticky; top: 76px; }
 .step { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px; border-radius: 50%;
   background: var(--signal); color: var(--signal-ink); font: italic 700 15px var(--display); }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -22,8 +37,11 @@ textarea { width: 100%; box-sizing: border-box; font: 13px var(--mono); margin-b
 #note .alert { margin: 12px 0; }
 
 .devices { list-style: none; margin: 0; padding: 0; }
-.device { display: grid; grid-template-columns: 14px minmax(160px, 1fr) minmax(180px, 2fr) auto; gap: 10px; align-items: center;
+.device { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 6px 10px; align-items: center;
   border-top: 1px solid var(--line); padding: 10px 0; }
+.device input { grid-column: 2 / 3; grid-row: 2; }
+.device .dev-btns { grid-column: 3; grid-row: 1 / 3; }
+.device.on input { display: none; }
 .dev-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--line-2); }
 .device.on .dev-dot { background: var(--stock-ok); box-shadow: 0 0 0 3px var(--good-bg); }
 .device.error .dev-dot { background: var(--crit); }
@@ -39,7 +57,7 @@ textarea { width: 100%; box-sizing: border-box; font: 13px var(--mono); margin-b
 #play b { display: block; font: italic 700 17px var(--display); margin-bottom: 6px; }
 #play input[type="number"] { width: 80px; }
 
-.floor-svg { display: block; width: 100%; height: auto; max-height: 420px; background: var(--mat-bg); border-radius: 12px;
+.floor-svg { display: block; width: 100%; height: auto; max-height: 560px; background: var(--mat-bg); border-radius: 12px;
   border: 1px solid var(--mat-edge); }
 .floor-svg .track { stroke: var(--mat-tape); stroke-width: 6; stroke-linecap: round; }
 .floor-svg .hit { stroke: transparent; stroke-width: 22; cursor: pointer; }
@@ -62,9 +80,8 @@ body { padding-bottom: 104px; }
 .top .finish { cursor: pointer; }            /* a secret lives here */
 
 @media (max-width: 860px) {
-  .grid { grid-template-columns: 1fr; }
-  .device { grid-template-columns: 14px 1fr; }
-  .device input, .device .dev-btns { grid-column: 2 / -1; }
+  .grid, .sim-grid { grid-template-columns: 1fr; }
+  .floor { position: static; }
 }
 @media (max-width: 600px) {
   .top-row, main { padding-left: 16px; padding-right: 16px; }

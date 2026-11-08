@@ -4,7 +4,7 @@ A short map for whoever picks the project up next. The [README](README.md) expla
 
 ## Status (November 2026)
 
-- **Phase 0–2 done:** the AI (ML ranker), MQTT with a key per device, the website (login, Setup with the stations, track and device keys, Map, Stations, History, the AI explained under Extra) and the separate Carkaroo Simulator for practice.
+- **Phase 0–2 done:** the AI (ML ranker), MQTT with a key per device, the website (login, Setup with the stations, track and device keys, Map, Stations, History, the AI explained under More) and the separate Carkaroo Simulator for practice.
 - **The website is a working test version, not the final design.** Its look will still change.
 - **Phase 3 next:** car firmware and station nodes ([firmware/README.md](firmware/README.md)), then calibration. See [docs/project-plan.md](docs/project-plan.md) for the checklist.
 - The poster and portfolio are designed in Canva by the team. `design/print/` only holds drafts and helper scripts for them.
