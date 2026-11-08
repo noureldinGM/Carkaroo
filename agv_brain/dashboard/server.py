@@ -7,19 +7,20 @@ so it works the same for the simulation and for the real car over MQTT.
     GET  /api/snapshot     {"state", "decision", "layout", "sim"} as JSON
     POST /api/request      {"material": "B", "station": "S3"}  manual request
     POST /api/refill       {"material": "A"}  the warehouse rack was restocked
-    POST /api/sim          simulation controls (obstacle, stock), simulation only
+    POST /api/sim          simulation controls (obstacle, stock): only the standalone dashboard of
+                           scripts/run_factory_sim.py; the website itself never simulates
 
 With an `app` (agv_brain.app.App) it also serves the login, Start and Setup pages:
     GET  /api/factories            the factories made so far (names only)
     POST /api/login                {"name": "Exhibit Factory"}  open or make a factory
     POST /api/logout               back to the login page (stops the factory)
-    POST /api/run                  {"mode": "sim", "speed": 8}  start the factory
+    POST /api/run                  start the factory (it waits for the car and the stations to log in)
     POST /api/stop                 stop it
     GET  /api/factory/settings     the factory's materials and stations, for the Setup page
     POST /api/factory/settings     {"materials": [...], "stations": [...]}  save them
     GET  /api/setup                mode, track, devices (keys only for the laptop itself)
     GET  /api/track/<id>           a track, for the editor
-    POST /api/mode                 {"mode": "real_car", "track": "my-track", "speed": 8}  (restarts it if running)
+    POST /api/mode                 {"track": "my-track"}  the track to use (restarts it if running)
     POST /api/device/<id>/key      a new key for a device
     POST /api/track/validate       {"track": {...}} -> problems
     POST /api/track/save           {"name": "My track", "track": {...}}
@@ -300,6 +301,8 @@ class DashboardServer:
                                           "/api/factory/settings")
                             or self.path.startswith(("/api/device/", "/api/track/"))):
                     return self._setup_post(body)
+                if app and self.path == "/api/sim":
+                    return self._json(404, {"error": "The website does not simulate: use the simulator website."})
                 if self.path in ("/api/request", "/api/refill", "/api/sim"):
                     if app and not app.running:
                         return self._json(409, {"error": "The factory is not running. Press Start first."})
@@ -344,7 +347,7 @@ class DashboardServer:
                                                          "/api/factory/settings"):
                         return self._json(409, {"error": "Open a factory on the login page first."})
                     if self.path == "/api/run":
-                        app.run(body.get("mode"), body.get("speed"))
+                        app.run()
                         return self._json(200, {"ok": True, "mode": app.mode, "running": app.running})
                     if self.path == "/api/factory/settings":
                         problems = app.save_factory_settings(body)
@@ -353,7 +356,7 @@ class DashboardServer:
                         app.stop_session()
                         return self._json(200, {"ok": True, "running": False})
                     if self.path == "/api/mode":
-                        app.configure(body.get("mode"), body.get("track"), body.get("speed"))
+                        app.configure(None, body.get("track"), None)
                         return self._json(200, {"ok": True, "mode": app.mode, "track": app.track,
                                                 "running": app.running})
                     if self.path.startswith("/api/device/") and self.path.endswith("/key"):

@@ -1,0 +1,59 @@
+/* The Carkaroo Simulator's page: the Carkaroo design system (design/), with its own
+   dashed "practice" frame so it is never mixed up with the Carkaroo website. */
+/* materials D and E (A-C come from design/tokens.css), as on the Carkaroo website */
+:root { --material-d: #7a4fa3; --material-e: #4f6b1c; }
+.mat.D { background: var(--material-d); } .mat.E { background: var(--material-e); }
+body { background: var(--paper); }
+.top { position: sticky; top: 0; z-index: 5; background: var(--paper); }
+.top-row { display: flex; align-items: center; gap: 16px; max-width: 1240px; margin: 0 auto; padding: 12px 24px; flex-wrap: wrap; }
+#logo .roo-logo, #logo.roo-logo { --size: 31px; }
+.sim-title { font: italic 700 26px var(--display); text-transform: uppercase; letter-spacing: .03em; }
+.sim-factory { margin-left: auto; font: italic 700 17px var(--display); color: var(--ink-2); }
+main { max-width: 1240px; margin: 0 auto; padding: 24px 24px 60px; outline: 3px dashed var(--line-2); outline-offset: -10px;
+  border-radius: 18px; }
+.mono { font: 13px var(--mono); }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; margin: 16px 0; }
+.step { display: inline-grid; place-items: center; width: 24px; height: 24px; margin-right: 6px; border-radius: 50%;
+  background: var(--signal); color: var(--signal-ink); font: italic 700 15px var(--display); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.inline { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); }
+#host { width: 140px; } #port { width: 90px; }
+textarea { width: 100%; box-sizing: border-box; font: 13px var(--mono); margin-bottom: 8px; resize: vertical; }
+#note .alert { margin: 12px 0; }
+
+.devices { list-style: none; margin: 0; padding: 0; }
+.device { display: grid; grid-template-columns: 14px minmax(160px, 1fr) minmax(180px, 2fr) auto; gap: 10px; align-items: center;
+  border-top: 1px solid var(--line); padding: 10px 0; }
+.dev-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--line-2); }
+.device.on .dev-dot { background: var(--stock-ok); box-shadow: 0 0 0 3px var(--good-bg); }
+.device.error .dev-dot { background: var(--crit); }
+.dev-name { display: grid; }
+.dev-name span { font-size: 12px; color: var(--muted); }
+.device.on .dev-name span { color: var(--good); }
+.device .err { grid-column: 2 / -1; font-size: 13px; color: var(--crit); }
+.device input { width: 100%; box-sizing: border-box; font: 13px var(--mono); }
+.dev-live { grid-column: 2 / -1; font: 12px var(--mono); color: var(--ink-2); }
+
+#play .ctl-row { padding: 10px 0; border-top: 1px dashed var(--line); }
+#play .ctl-row:first-child { border-top: 0; }
+#play b { display: block; font: italic 700 17px var(--display); margin-bottom: 6px; }
+#play input[type="number"] { width: 80px; }
+
+.floor-svg { display: block; width: 100%; height: auto; max-height: 420px; background: var(--mat-bg); border-radius: 12px;
+  border: 1px solid var(--mat-edge); }
+.floor-svg .track { stroke: var(--mat-tape); stroke-width: 6; stroke-linecap: round; }
+.floor-svg .hit { stroke: transparent; stroke-width: 22; cursor: pointer; }
+.floor-svg .hit:hover + .track, .floor-svg .track.hover { stroke: var(--stop); }
+.floor-svg .blocked { stroke: var(--stop); stroke-width: 8; stroke-dasharray: 8 6; stroke-linecap: round; pointer-events: none; }
+.floor-svg .node { fill: var(--mat-tape); }
+.floor-svg .label { fill: #1c1d1a; font: italic 700 14px var(--display); }
+.floor-svg .car { fill: var(--signal); stroke: #121314; stroke-width: 2; transition: transform .6s linear; }
+
+@media (max-width: 860px) {
+  .grid { grid-template-columns: 1fr; }
+  .device { grid-template-columns: 14px 1fr; }
+  .device input, .device .dev-btns { grid-column: 2 / -1; }
+}
+@media (max-width: 600px) {
+  .top-row, main { padding-left: 16px; padding-right: 16px; }
+}

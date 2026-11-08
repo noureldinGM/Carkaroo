@@ -100,8 +100,8 @@ def app():
 
 
 def test_switch_to_real_car_stops_the_simulated_car(app):
-    assert app.mode == "sim" and app.session is None          # nothing runs until Start
-    app.run()
+    assert app.mode == "real" and app.session is None         # nothing runs until Start; the website is real
+    app.run("sim")                                             # the sim modes stay for the tests and dev tools
     assert app.session.car is not None
     app.switch("real_car")
     assert app.session.car is None and app.session.stations      # stations stay simulated
@@ -122,9 +122,9 @@ def test_setup_hides_keys_from_other_devices(app):
 def test_real_modes_need_a_broker():
     a = App(MemoryBus(), None, port=free_port(), state_file=None, log=False, broker_error="no broker here")
     try:
-        with pytest.raises(ValueError, match="needs the MQTT broker"):
-            a.switch("real")
-        assert a.mode == "sim"
+        with pytest.raises(ValueError, match="MQTT broker, and it is not running. no broker here"):
+            a.run()                       # the website talks to devices: without the broker it cannot start
+        assert a.session is None
     finally:
         a.stop()
 

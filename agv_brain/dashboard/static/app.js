@@ -13,8 +13,10 @@ const PAGES = ["login", "start", "setup", "map", "stations", "history", "ai"];
 const LIVE = new Set(["map", "stations", "history", "ai"]);   // pages that need a running factory
 
 let layout = null;
-let simCar = false;            // the car is simulated: obstacle and battery controls
-let simStations = false;       // the stations are simulated: stock control
+// the website never simulates: these are only true on the standalone dev dashboard of
+// scripts/run_factory_sim.py, which shows its obstacle, battery and stock controls
+let simCar = false;
+let simStations = false;
 let layoutVersion = -1;
 let page = "";
 let factory = null;            // {id, name} of the open factory, null before login
@@ -223,7 +225,7 @@ function placeMap() {
 function showIdle() {
   const html = running ? "" : `<div class="idle"><svg viewBox="0 0 44 30" aria-hidden="true"><use href="#roo"/></svg>
     <div><b>The factory is stopped.</b><span>Start it to see Roo drive and the AI decide.</span></div>
-    ${local ? `<button class="go" data-start="sim" type="button">Start a simulation</button>` : ""}
+    ${local ? `<button class="go" data-start type="button">Start</button>` : ""}
     <a href="#setup" class="ghost-link">Setup</a></div>`;
   document.querySelectorAll(".idle-slot").forEach((el) => setHtml(el, html));
   if (!running && map.car) {                 // the stopped factory: just the track, no car or route
@@ -240,8 +242,8 @@ document.addEventListener("click", async (ev) => {
   const b = ev.target.closest("[data-start]");
   if (!b) return;
   b.disabled = true;
-  if (await post("/api/run", { mode: b.dataset.start })) {
-    toast("Starting… Roo is on its way.");
+  if (await post("/api/run", {})) {
+    toast("Started. The AI is waiting for the car and the stations to log in.");
     running = true;
     if (page !== "map") location.hash = "#map";
   }
@@ -288,12 +290,16 @@ function renderStart() {
   const note = $("#start-running");
   note.hidden = !running;
   if (running) note.innerHTML = `The factory is already running. <a href="#map">Open the map</a>.`;
-  $("#start-sim").disabled = !local;
+  $("#start-run").disabled = !local;
 }
-$("#start-sim").addEventListener("click", async () => {
-  $("#start-sim").disabled = true;
-  if (await post("/api/run", { mode: "sim" })) { running = true; toast("Starting the simulation…"); location.hash = "#map"; }
-  $("#start-sim").disabled = !local;
+$("#start-run").addEventListener("click", async () => {
+  $("#start-run").disabled = true;
+  if (await post("/api/run", {})) {
+    running = true;
+    toast("Started. Now connect the car and the stations (or the simulator) with their keys.");
+    location.hash = "#setup";
+  }
+  $("#start-run").disabled = !local;
 });
 
 // ---------- map (built once) ----------
@@ -804,8 +810,8 @@ function buildControls() {
     <div class="ctl"><h3>Obstacle</h3>
       <p>Click a line on the map to block it for 60 s. The car stops, waits 10 s, then the AI finds another way.</p>
       <button class="ghost" id="clr">Remove all obstacles</button></div>`
-    : `<div class="ctl"><h3>The real car</h3><p>Test it for real: put something in front of its ultrasonic sensor.
-      After 10 s the AI sends it another way.</p></div>`;
+    : `<div class="ctl"><h3>Obstacles</h3><p>Put something in front of the car's ultrasonic sensor (or use the
+      Carkaroo Simulator's obstacle). After 10 s the AI sends it another way.</p></div>`;
   $("#controls").innerHTML = `
     <div class="ctl"><h3>Ask for a delivery</h3>
       <p>Add a request by hand and see where the AI puts it.</p>
@@ -816,8 +822,8 @@ function buildControls() {
       <p>Pretend a load cell reads a different number. Try a low one.</p>
       <div class="row"><select id="sk-st" aria-label="Station">${stationOpts}</select><select id="sk-m" aria-label="Material"></select>
         <input id="sk-v" type="number" min="0" value="2" aria-label="Units"><button id="sk-go">Set</button></div></div>`
-    : `<div class="ctl"><h3>Real stations</h3><p>The stock comes from the stations' load cells. Take a box off a
-      scale and watch the AI react.</p></div>`}`;
+    : `<div class="ctl"><h3>Stock readings</h3><p>The stock comes from the stations' load cells (or the Carkaroo
+      Simulator). Take a box off a scale and watch the AI react.</p></div>`}`;
   const fill = (stSel, mSel) => {
     const mats = layout.stations[$(stSel).value].materials;
     $(mSel).innerHTML = mats.map((m) => `<option value="${esc(m)}">${esc(m)} · ${esc(layout.materials[m].name)}</option>`).join("");
@@ -845,11 +851,6 @@ function buildControls() {
 }
 
 // ---------- Setup ----------
-const MODE_INFO = {
-  sim: ["Simulation", "Everything is simulated: the car, the stations and their load cells. Good for practice and demos."],
-  real_car: ["Real car", "Your car drives on the real track. The stations are simulated until the load cells are built."],
-  real: ["Real factory", "The real car and the real station nodes. Nothing is simulated."],
-};
 let setup = null;           // last /api/setup answer
 let setupShape = "";        // what the Setup page was built for (rebuilt only when it changes)
 const shownKeys = new Set();
@@ -867,9 +868,8 @@ async function loadSetup() {
     if (!r.ok) return;
     setup = await r.json();
   } catch (e) { return; }
-  const shape = JSON.stringify([setup.mode, setup.track, setup.speed, setup.local, setup.broker.ok, setup.running,
-    setup.track_problems, setup.key_error,
-    setup.tracks.map((x) => x.id), setup.devices.map((d) => [d.id, d.key, d.simulated])]);
+  const shape = JSON.stringify([setup.track, setup.local, setup.broker.ok, setup.running, setup.track_problems,
+    setup.key_error, setup.tracks.map((x) => x.id), setup.devices.map((d) => [d.id, d.key])]);
   if (shape !== setupShape) { setupShape = shape; buildSetup(); }
   updateDevices();
   if (setup.factory) FactoryEditor.load(setup.factory.id, !setup.local);
@@ -878,7 +878,8 @@ async function loadSetup() {
 function buildSetup() {
   const s = setup, b = s.broker;
   const readOnly = !s.local;
-  $("#setup-note").innerHTML = (!b.ok ? `<div class="alert"><b>Only the simulation can run right now.</b> ${esc(b.error || "")}</div>` : "")
+  $("#setup-note").innerHTML = (!b.ok ? `<div class="alert crit"><b>The broker is not running, so the car and the
+      stations cannot connect and the factory cannot start.</b> ${esc(b.error || "")}</div>` : "")
     + (readOnly ? `<div class="alert">You are looking from another device, so this page is read-only and the keys are hidden.
         Make changes on the laptop.</div>` : "")
     + (s.key_error ? `<div class="alert crit">${esc(s.key_error)}</div>` : "")
@@ -887,45 +888,26 @@ function buildSetup() {
         `<li>${esc(p)}</li>`).join("")}</ul></div>` : "");
   const trackOpts = s.tracks.map((x) => `<option value="${esc(x.id)}"${x.id === s.track ? " selected" : ""}>${esc(x.name)}</option>`).join("");
   $("#setup-mode").innerHTML = `
-    <div class="modes" role="radiogroup" aria-label="Factory mode">
-      ${Object.entries(MODE_INFO).map(([id, [name, about]]) => {
-        const off = id !== "sim" && !b.ok;
-        return `<label class="mode${id === s.mode ? " on" : ""}${off ? " off" : ""}">
-          <input type="radio" name="mode" value="${id}"${id === s.mode ? " checked" : ""}${off || readOnly ? " disabled" : ""}>
-          <b>${name}</b><span>${about}</span></label>`;
-      }).join("")}
-    </div>
     <div class="row mode-row">
       <label>Track <select id="set-track"${readOnly ? " disabled" : ""}>${trackOpts}</select></label>
-      <label id="speed-wrap">Speed <span class="speed-end">real time</span>
-        <input id="set-speed" type="range" min="1" max="20" step="1" value="${s.speed}"${readOnly ? " disabled" : ""}
-          aria-describedby="speed-val"><span class="speed-end">x20</span>
-        <output id="speed-val" class="speed-val">x${s.speed}</output></label>
     </div>
     <div class="row run-row">
-      ${s.running ? `<button id="set-apply"${readOnly ? " disabled" : ""}>Apply changes</button>
+      ${s.running ? `<button id="set-apply"${readOnly ? " disabled" : ""}>Use this track</button>
         <button class="ghost" id="set-stop"${readOnly ? " disabled" : ""}>Stop</button>`
-        : `<button class="go" id="set-apply"${readOnly ? " disabled" : ""}>Start</button>`}
+        : `<button class="go" id="set-apply"${readOnly || !b.ok ? " disabled" : ""}>Start</button>`}
     </div>
     <p class="hint">${s.running
-      ? `Running: <b>${esc(s.mode_name)}</b> on <b>${esc(trackName(s))}</b>. Applying a change restarts the AI in a few seconds.`
-      : `Stopped. Press <b>Start</b> to run <b>${esc(trackName(s))}</b>; the AI starts in a few seconds.`}</p>`;
-  const speedShown = () => { $("#speed-wrap").hidden = document.querySelector('input[name="mode"]:checked').value !== "sim"; };
-  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener("change", () => {
-    document.querySelectorAll(".mode").forEach((m) => m.classList.toggle("on", m.querySelector("input").checked));
-    speedShown();
-  }));
-  speedShown();
-  $("#set-speed").addEventListener("input", () => { $("#speed-val").textContent = `x${$("#set-speed").value}`; });
+      ? `Running on <b>${esc(trackName(s))}</b>. The AI decides as soon as the car and the stations are online.`
+      : `Stopped. Press <b>Start</b>: the AI starts and waits for the car and the stations to log in.`}</p>
+    <p class="run-wait" id="run-wait"></p>`;
   $("#set-apply").addEventListener("click", async () => {
-    const mode = document.querySelector('input[name="mode"]:checked').value;
     const btn = $("#set-apply"), label = btn.textContent;
     btn.disabled = true; btn.textContent = s.running ? "Switching…" : "Starting…";
-    const body = { mode, track: $("#set-track").value, speed: Number($("#set-speed").value) };
-    let r = await postJson("/api/mode", body);
+    let r = await postJson("/api/mode", { track: $("#set-track").value });
     if (r.ok && !s.running) r = await postJson("/api/run", {});
     btn.disabled = false; btn.textContent = label;
-    toast(r.ok ? `${s.running ? "Now running" : "Started"}: ${MODE_INFO[mode][0]}.` : (r.data.error || "Could not start."));
+    toast(r.ok ? (s.running ? "Now using that track." : "Started. Connect the car and the stations with their keys.")
+      : (r.data.error || "Could not start."));
     if (r.ok) running = true;
     setupShape = "";
     loadSetup();
@@ -937,13 +919,16 @@ function buildSetup() {
   });
 
   const addr = b.addresses.length ? b.addresses.join(" or ") : "this laptop's IP address";
-  $("#setup-devices").innerHTML = `<ul class="devices">${s.devices.map((d) => `
+  const keys = s.devices.every((d) => d.key);
+  $("#setup-devices").innerHTML = (keys ? `<div class="row dev-tools">
+      <button class="ghost small" id="copy-all" type="button">Copy all for the simulator</button>
+      <span class="quiet">The address, the port and every key, to paste into the Carkaroo Simulator.</span></div>` : "")
+    + `<ul class="devices">${s.devices.map((d) => `
     <li class="device" data-dev="${esc(d.id)}">
       <div class="dev-row">
         <span class="dev-dot" aria-hidden="true"></span>
         <span class="dev-name"><b>${esc(d.kind === "car" ? `Car ${d.id}` : `${d.id} · ${d.name}`)}</b>
           <span class="dev-state"></span></span>
-        ${d.simulated ? `<span class="tag sim">simulated</span>` : `<span class="tag real">real</span>`}
         <button class="ghost small" data-connect="${esc(d.id)}" aria-expanded="false">Connect</button>
       </div>
       <div class="connect" hidden>
@@ -966,8 +951,8 @@ client.connect("${esc(d.id)}", "${esc(d.id)}", "&lt;key&gt;");${d.kind === "car"
 
   const cur = s.tracks.find((x) => x.id === s.track) || { id: s.track, name: s.track };
   $("#setup-track").innerHTML = `
-    <p>The AI and the simulated car use <b>${esc(cur.name)}</b>. Draw your real track with its measurements in cm;
-      the editor checks it before it can be used.</p>
+    <p>The AI uses <b>${esc(cur.name)}</b>. Draw your real track with its measurements in cm; the editor checks it
+      before it can be used.</p>
     <div class="row"><button id="edit-track"${readOnly ? " disabled" : ""}>Edit this track</button>
       <button class="ghost" id="new-track"${readOnly ? " disabled" : ""}>Start an empty track</button></div>`;
   $("#edit-track").addEventListener("click", async () => {
@@ -981,7 +966,13 @@ $("#setup-devices").addEventListener("click", async (ev) => {
   const t = ev.target.closest("button");
   if (!t || !setup) return;
   const dev = (id) => setup.devices.find((d) => d.id === id);
-  if (t.dataset.connect) {
+  if (t.id === "copy-all") {
+    const text = [`# Carkaroo devices for ${factory ? factory.name : "this factory"}`,
+      "broker: localhost", `port: ${setup.broker.port ?? 1883}`,
+      ...setup.devices.map((d) => `${d.id}: ${d.key}`)].join("\n");
+    try { await navigator.clipboard.writeText(text); toast("Copied. Paste it into the simulator's Connect box."); }
+    catch (e) { toast("Copy did not work: use Show and Copy for each device."); }
+  } else if (t.dataset.connect) {
     const box = t.closest(".device").querySelector(".connect");
     box.hidden = !box.hidden;
     t.setAttribute("aria-expanded", String(!box.hidden));
@@ -1011,8 +1002,17 @@ function updateDevices() {
     const li = document.querySelector(`.device[data-dev="${CSS.escape(d.id)}"]`);
     if (!li) continue;
     li.classList.toggle("online", d.online);
-    li.querySelector(".dev-state").textContent = d.simulated ? (!setup.running ? "simulated · stopped" : d.online ? "simulated · running" : "simulated · starting")
-      : d.online ? `online · last message ${agoText(d.last_seen_s)}` : `offline · ${agoText(d.last_seen_s)}`;
+    li.querySelector(".dev-state").textContent = d.online ? `online · last message ${agoText(d.last_seen_s)}`
+      : `offline · ${agoText(d.last_seen_s)}`;
+  }
+  // while running: who the AI is still waiting for
+  const wait = $("#run-wait");
+  if (wait) {
+    const off = setup.devices.filter((d) => !d.online).map((d) => (d.kind === "car" ? `Car ${d.id}` : d.id));
+    wait.textContent = !setup.running ? "" : off.length
+      ? `Waiting for: ${off.join(", ")}. Connect them with their keys (Devices), or with the Carkaroo Simulator.`
+      : "Everything is online.";
+    wait.classList.toggle("ok", setup.running && !off.length);
   }
 }
 
@@ -1023,8 +1023,8 @@ function setMode(d) {
   if (factory) $("#factory-name").textContent = factory.name;
   $("#switch-factory").disabled = !local;
   if (!d.mode) return;
-  pill.textContent = d.running ? (MODE_INFO[d.mode.id] || [d.mode.name])[0] : "Stopped";
-  pill.className = `mode-pill ${!d.running ? "stopped" : d.mode.id === "sim" ? "sim" : "real"}`;
+  pill.textContent = d.running ? "Running" : "Stopped";
+  pill.className = `mode-pill ${d.running ? "real" : "stopped"}`;
 }
 
 // ---------- main loop ----------
