@@ -70,7 +70,8 @@ explained** and the design system); the factory's name; one pill with **Running*
 a dot for Roo (green = online); and the light/dark button. While nothing runs, the Map, Stations, History and AI
 pages say *"The factory is stopped"* with a **Start** button.
 
-**Setup** (home) puts what matters every day first, then the three steps to build the factory, in order:
+**Setup** (home) puts what matters every day first, then the three steps to build the factory, in order (a step's
+number turns into a green ✓ when it is done: saved, the track fits, every device online):
 - **Run** (at the top): which track, **Start** and **Stop** (and *Use this track* while it runs). While it runs, it
   lists the devices the AI is still waiting for, until *"Everything is online"*.
 - **1 Stations and materials** (*Fold* closes it once your factory is built): build your factory. Each material (up to 5, letters A to E) has a name, how many units
@@ -123,7 +124,8 @@ in …", and tags for *on the way* and *stopped*. Below:
   that material"*, *"already asked for"*).
 
 **History:** the totals so far (deliveries, how long production lines were stopped, battery), alerts, and what
-happened: one card per delivery (task, pickup, delivered), with the other events in between.
+happened: one card per delivery (task, pickup, delivered), with the other events in between (new requests in
+lighter small print).
 
 **The AI, explained** (under More): why there is an AI at all, in three boxes. The examiner (an exact optimizer)
 tries every order of the deliveries, so it always finds the best one, but the number of orders explodes (7 requests:

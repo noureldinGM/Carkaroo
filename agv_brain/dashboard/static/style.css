@@ -206,6 +206,9 @@ table.rank { width: 100%; border-collapse: collapse; font-size: 14px; }
 .steps li:last-child { border-bottom: 0; }
 .ev-list { padding: 0 18px; }
 .ev-list li { color: var(--ink-2); font-size: 14px; }
+/* requests are the small print of the history: lighter, so the delivery cards stand out */
+.ev-list li:has(.i.request) { padding: 4px 0; font-size: 13px; color: var(--muted); border-bottom-style: dashed; }
+.ev-list li:has(.i.request) .i { width: 20px; height: 20px; font-size: 11px; background: none; box-shadow: inset 0 0 0 1px var(--line-2); justify-self: center; }
 .feed .t { font: 13px var(--mono); color: var(--muted); }
 .feed .i { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--line); font-size: 13px; color: var(--ink-2); }
 .feed .i.delivered { background: var(--good-bg); color: var(--good); }
@@ -304,6 +307,9 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
 .step-card h3 { display: flex; align-items: center; gap: 10px; }
 .step { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%;
   background: var(--signal); color: var(--signal-ink); font: italic 700 16px var(--display); }
+/* a finished step: the yellow number becomes a green tick */
+.step-card.done .step { background: var(--good); color: #fff; font-size: 0; transition: background var(--fast); }
+.step-card.done .step::before { content: "✓"; font: 700 15px/1 var(--sans); }
 details.step-card > summary { list-style: none; cursor: pointer; }
 details.step-card > summary::-webkit-details-marker { display: none; }
 details.step-card > summary h3::after { content: "Fold"; margin-left: auto; font: 600 12px var(--sans); color: var(--muted); }

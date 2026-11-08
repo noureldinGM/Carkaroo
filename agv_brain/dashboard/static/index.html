@@ -115,18 +115,18 @@
         <div id="setup-mode"></div>
       </section>
       <!-- then the three steps to build the factory, in order -->
-      <details class="ctl step-card factory-card" open>
+      <details id="step-fac" class="ctl step-card factory-card" open>
         <summary><h3 id="fac-title"><span class="step">1</span>Stations and materials</h3></summary>
         <p>What your factory makes with: each material has a rack in the warehouse (W-A, W-B…), and each station uses
           one or more of them. Then draw them on the track (step 2).</p>
         <div id="setup-factory"><p class="quiet">Loading…</p></div>
       </details>
-      <section class="ctl step-card track-card" aria-labelledby="trk-title">
+      <section id="step-track" class="ctl step-card track-card" aria-labelledby="trk-title">
         <h3 id="trk-title"><span class="step">2</span>Track</h3>
         <div id="setup-track"></div>
         <div id="editor" hidden></div>
       </section>
-      <section class="ctl step-card" aria-labelledby="dev-title">
+      <section id="step-dev" class="ctl step-card" aria-labelledby="dev-title">
         <h3 id="dev-title"><span class="step">3</span>Devices</h3>
         <p>The car and each station log in to the laptop's broker with their own key: the real ones, or the
           Carkaroo Simulator for practice. A device turns green as soon as it sends its first message.</p>

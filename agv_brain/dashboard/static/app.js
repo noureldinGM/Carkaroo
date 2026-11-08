@@ -1031,7 +1031,24 @@ $("#setup-devices").addEventListener("click", async (ev) => {
   }
 });
 
+// Setup's steps: the number turns into a green ✓ when the step is done
+function markSteps() {
+  const saved = $("#fe-state") && !$("#fe-state").classList.contains("unsaved");
+  const done = {
+    "#step-fac": [saved, "Saved"],
+    "#step-track": [!setup.track_problems.length, "The track fits your stations"],
+    "#step-dev": [setup.devices.length > 0 && setup.devices.every((d) => d.online), "Every device is online"],
+  };
+  for (const [id, [ok, why]] of Object.entries(done)) {
+    const card = $(id), step = card && card.querySelector(".step");
+    if (!card) continue;
+    card.classList.toggle("done", !!ok);
+    if (step) step.title = ok ? `Done: ${why}` : "Not done yet";
+  }
+}
+
 function updateDevices() {
+  markSteps();
   for (const d of setup.devices) {
     const li = document.querySelector(`.device[data-dev="${CSS.escape(d.id)}"]`);
     if (!li) continue;
