@@ -200,3 +200,20 @@ def test_a_new_station_needs_the_track_then_runs(web):
         assert {s.station for s in web.app.session.stations} >= {"S5"}
     finally:
         tracks_mod.TRACKS_DIR = tracks_mod.CONFIG_DIR / "tracks"
+
+
+def test_refused_station_ids_are_a_plain_error(web):
+    """broker.set_stations raises ValueError for an ID it cannot use: nothing is saved, Setup says why."""
+    def refuse(ids):
+        raise ValueError("bad station id 'S1'")
+    web.app.broker.set_stations = refuse
+    web.post("/api/login", {"name": "Exhibit Factory"})                 # opening still works
+    assert "could not make keys" in web.app.setup(True)["key_error"]
+    d = json.loads(urllib.request.urlopen(web.base + "/api/factory/settings").read())
+    d["stations"][0]["name"] = "Renamed line"
+    code, body = web.post("/api/factory/settings", {"materials": d["materials"], "stations": d["stations"]})
+    assert code == 400 and "could not make keys" in body["error"] and "Station IDs are S1 to S8" in body["error"]
+    assert factories.editable("exhibit-factory")["stations"][0]["name"] != "Renamed line"
+    web.app.broker.set_stations = lambda ids: None
+    assert web.post("/api/factory/settings", {"materials": d["materials"], "stations": d["stations"]})[0] == 200
+    assert web.app.setup(True)["key_error"] is None
