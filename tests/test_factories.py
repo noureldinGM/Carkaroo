@@ -139,3 +139,64 @@ def test_refills_and_sim_controls_are_checked():
                 {"cmd": "explode"}]:
         with pytest.raises(ValueError):
             check_sim(bad, LAYOUT, STATE)
+
+
+# -- stations and materials made on the Setup page -------------------------------------
+
+def _sample_edit(fid):
+    data = factories.editable(fid)
+    return {"materials": data["materials"], "stations": data["stations"]}
+
+
+def test_settings_are_checked():
+    fid = factories.open_or_create("Exhibit Factory")["id"]
+    good = _sample_edit(fid)
+    assert set(factories.check_settings(good)["stations"]) == {"S1", "S2", "S3", "S4"}
+    import copy
+
+    def bad(change):
+        d = copy.deepcopy(good)
+        change(d)
+        with pytest.raises(ValueError):
+            factories.check_settings(d)
+
+    bad(lambda d: d["materials"].append({"id": "A", "name": "Again", "box": 1, "warehouse": 1}))   # same letter
+    bad(lambda d: d["materials"][0].update(id="Z"))                                                # not A-E
+    bad(lambda d: d["materials"][0].update(box=0))
+    bad(lambda d: d["stations"][0].update(name="  "))
+    bad(lambda d: d["stations"][1].update(name=d["stations"][0]["name"]))                           # two the same
+    bad(lambda d: d["stations"][0].update(materials={}))
+    bad(lambda d: d["stations"][0]["materials"]["A"].update(stock=999))                             # above capacity
+    bad(lambda d: d["stations"][0].update(priority=7))
+    bad(lambda d: d["stations"].append({"id": "S9", "name": "Too many", "priority": 1, "materials": {"A": {}}}))
+    bad(lambda d: d.update(stations=[]))
+    # a material no station uses is refused
+    bad(lambda d: d["materials"].append({"id": "D", "name": "Paint", "box": 5, "warehouse": 50}))
+
+
+def test_a_new_station_needs_the_track_then_runs(web):
+    web.post("/api/login", {"name": "Exhibit Factory"})
+    d = json.loads(urllib.request.urlopen(web.base + "/api/factory/settings").read())
+    d["materials"].append({"id": "D", "name": "Paint", "box": 5, "warehouse": 50})
+    d["stations"].append({"id": "S5", "name": "Paint shop", "priority": 2,
+                          "materials": {"D": {"capacity": 20, "safety": 4, "stock": 10, "use_per_min": 1}}})
+    code, body = web.post("/api/factory/settings", {"materials": d["materials"], "stations": d["stations"]})
+    assert code == 200
+    assert any("S5" in p for p in body["track_problems"]) and any("W-D" in p for p in body["track_problems"])
+    assert web.post("/api/run", {})[0] == 400                    # the sample track has no S5 yet
+    assert set(web.app.layout["stations"]) >= {"S5"} and "D" in web.app.layout["materials"]
+
+    track = json.loads(urllib.request.urlopen(web.base + "/api/track/sample").read())
+    track["nodes"].update({"W-D": {"x": 300, "y": 0, "type": "rack"}, "S5": {"x": 200, "y": 150, "type": "station"}})
+    track["edges"] += [["W-D", "J4"], ["J6", "S5"]]
+    import agv_brain.tracks as tracks_mod
+    tracks_mod.TRACKS_DIR = factories.FACTORIES_DIR.parent / "tracks"
+    try:
+        assert web.post("/api/track/save", {"name": "Paint track", "track": track})[0] == 200
+        assert web.post("/api/track/save", {"name": "Paint track", "track": track})[0] == 409    # asks first
+        assert web.post("/api/mode", {"track": "paint-track"})[0] == 200
+        assert web.post("/api/run", {})[0] == 200
+        assert "S5" in web.app.session.controller.ctx.settings.stations
+        assert {s.station for s in web.app.session.stations} >= {"S5"}
+    finally:
+        tracks_mod.TRACKS_DIR = tracks_mod.CONFIG_DIR / "tracks"

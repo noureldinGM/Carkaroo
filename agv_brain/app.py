@@ -100,15 +100,27 @@ class App:
         car, stations = MODES[self.mode]
         return {"car": car, "stations": stations}
 
+    @property
+    def materials(self) -> Path | None:
+        """The open factory's stations and materials (None: the sample, config/materials.yaml)."""
+        return factories.materials_path(self.factory["id"]) if self.factory else None
+
     def _open(self, factory: dict) -> None:
         self.factory = factory
+        self.settings = load_settings(self.materials)
         self.mode = factory["mode"] if factory["mode"] == "sim" or self.real_ok else "sim"
         self.speed = factory["speed"]
         try:
-            self._check_track(factory["track"])
+            tracks.track_path(factory["track"])
             self.track = factory["track"]
         except (ValueError, FileNotFoundError):
-            self.track = "sample"            # a saved track that no longer works: fall back
+            self.track = "sample"            # a track that was deleted: fall back to the sample
+        self._sync_broker()
+
+    def _sync_broker(self) -> None:
+        """Give every station of the open factory a key (stations can be added on the Setup page)."""
+        if self.broker and hasattr(self.broker, "set_stations"):
+            self.broker.set_stations(list(self.settings.stations))
 
     def login(self, name) -> dict:
         """Open the factory with this name (or make it). Whatever ran before stops."""
@@ -124,6 +136,8 @@ class App:
         with self._lock:
             self.stop_session()
             self.factory = None
+            self.settings = load_settings()
+            self._preview()
             self._save()
 
     def factory_info(self) -> dict | None:
@@ -136,10 +150,38 @@ class App:
         if problems["errors"]:
             raise ValueError("This track has problems: " + " ".join(problems["errors"][:3]))
 
+    def track_problems(self) -> list[str]:
+        """Why the chosen track does not fit this factory's stations and materials (empty: it fits)."""
+        try:
+            return tracks.validate(tracks.load_raw(self.track), self.settings)["errors"]
+        except (ValueError, FileNotFoundError) as exc:
+            return [str(exc)]
+
     def _preview(self) -> None:
         """The map of the chosen track, shown while nothing runs."""
-        self.layout = layout_json(load_context(tracks.track_path(self.track)))
+        try:
+            self.layout = layout_json(load_context(tracks.track_path(self.track), self.materials))
+        except ValueError:                   # a track the factory map cannot read: show the stations only
+            self.layout = layout_json(load_context(tracks.track_path("sample"), self.materials))
         self.layout_version += 1
+
+    def save_factory_settings(self, data) -> list[str]:
+        """Save the stations and materials from the Setup page. A running factory restarts
+        with them; if the track no longer fits, it stops. Returns the track's problems."""
+        with self._lock:
+            if not self.factory:
+                raise ValueError("Open a factory on the login page first.")
+            factories.save_settings(self.factory["id"], data)
+            self.settings = load_settings(self.materials)
+            self._sync_broker()
+            problems = self.track_problems()
+            if self.session:
+                self.stop_session()
+                if not problems:
+                    self._start_session()
+            if not self.session:
+                self._preview()
+            return problems
 
     def _start_session(self) -> None:
         self._check_track(self.track)
@@ -148,7 +190,7 @@ class App:
             self.dash.clear()
         self.session = FactorySim(policy=self.policy, speed=self.speed, bus=self.bus, log=self.log,
                                   layout=tracks.track_path(self.track), sim_car=sim_car, sim_stations=sim_stations,
-                                  car_id=self.car_id)
+                                  car_id=self.car_id, materials=self.materials)
         self.layout = layout_json(self.session.controller.ctx)
         self.layout_version += 1
         # clear the last session's decision so the page never shows an old one
@@ -252,7 +294,7 @@ class App:
             for d in devices:
                 d["key"] = b.keys.get(d["id"])
         return {"mode": self.mode, "mode_name": MODE_NAMES[self.mode], "modes": MODE_NAMES,
-                "running": self.running, "factory": self.factory_info(),
+                "running": self.running, "factory": self.factory_info(), "track_problems": self.track_problems(),
                 "track": self.track, "speed": self.speed, "tracks": tracks.list_tracks(),
                 "local": local, "broker": {"ok": b is not None, "error": self.broker_error,
                                            "port": b.port if b else None, "addresses": addrs,

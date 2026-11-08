@@ -376,3 +376,39 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
   .map .car, .waiting svg, .empty svg, .tabs.ready .tab-ink, .tab-ink.hop::after, .tabs a, .tabs a::after, .theme-btn > span, .start-card {
     transition: none; animation: none; }
 }
+
+/* ---------- Setup: stations and materials ---------- */
+/* materials D and E (A-C come from design/tokens.css); white letters stay readable on both */
+:root { --material-d: #7a4fa3; --material-e: #4f6b1c; }
+.mat.D { background: var(--material-d); } .mat.E { background: var(--material-e); }
+.map .chip.D, .ed-box.chip.D { fill: var(--material-d); } .map .chip.E, .ed-box.chip.E { fill: var(--material-e); }
+.factory-card { margin-bottom: 16px; }
+.fe-h { font: italic 700 18px var(--display); margin: 14px 0 8px; display: flex; gap: 10px; align-items: baseline; }
+.fe-h .quiet { font: 13px var(--sans); }
+.fe-mats { display: grid; gap: 8px; margin-bottom: 10px; }
+.fe-mat { display: grid; grid-template-columns: 30px minmax(160px, 2fr) 1fr 1fr auto; gap: 10px; align-items: end;
+  padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.fe-mat > .mat { align-self: center; }
+.fe-name, .fe-num { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.fe-name input, .fe-num input { width: 100%; min-width: 0; }
+.fe-sts { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; margin-bottom: 10px; }
+.fe-st { border: 1.5px solid var(--line-2); border-radius: var(--radius-md); padding: 10px 12px; }
+.fe-st header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.fe-st .sid { font: 13px var(--mono); color: var(--muted); }
+.fe-st-name { flex: 1; min-width: 0; font-weight: 600; }
+.fe-st select { font-size: 13px; }
+.fe-use { padding: 6px 0; border-top: 1px dashed var(--line); }
+.fe-tick { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.fe-use:not(.on) .fe-tick { color: var(--muted); }
+.fe-nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 2px 26px; }
+.fe-save { align-items: center; margin-top: 14px; gap: 10px; }
+.fe-state { font-size: 13px; color: var(--good); }
+.fe-state.unsaved { color: var(--warn); font-weight: 500; }
+#setup-note .alert ul { margin: 6px 0 0; padding-left: 20px; }
+@media (max-width: 600px) {
+  .fe-mat { grid-template-columns: 30px 1fr 1fr; }
+  .fe-mat .fe-name { grid-column: 2 / 4; }
+  .fe-mat button { grid-column: 1 / 4; justify-self: start; }
+  .fe-nums { grid-template-columns: 1fr 1fr; }
+  .fe-sts { grid-template-columns: 1fr; }
+}
