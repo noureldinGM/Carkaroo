@@ -40,19 +40,25 @@
         <a href="#history" data-tab="history">History</a>
       </nav>
       <details class="extra" id="extra">
-        <summary>Extra</summary>
+        <summary>More</summary>
         <div class="extra-menu">
           <a href="#ai" data-tab="ai">The AI, explained</a>
           <a href="/design/">Design system</a>
         </div>
       </details>
       <div class="status">
-        <span id="factory-chip" class="factory-chip" hidden><b id="factory-name"></b>
-          <button id="switch-factory" class="ghost small" type="button">Switch factory</button></span>
-        <a id="mode-pill" class="mode-pill" href="#setup" hidden></a>
+        <!-- the open factory: its name, with Switch factory in a small menu -->
+        <details id="factory-chip" class="factory-chip" hidden>
+          <summary title="Factory"><b id="factory-name"></b></summary>
+          <div class="factory-menu"><button id="switch-factory" class="ghost small" type="button">Switch factory</button></div>
+        </details>
+        <!-- one pill: running or stopped, the factory time, and whether Roo is online -->
+        <div class="run-pill">
+          <a id="mode-pill" class="mode-pill" href="#setup" hidden></a>
+          <span id="clock" class="clock" title="Factory time">--:--</span>
+          <span id="link" class="link off">Connecting…</span>
+        </div>
         <button id="theme" class="theme-btn" type="button" aria-label="Switch to dark mode"><span aria-hidden="true">&#9790;</span></button>
-        <span id="clock" class="clock" title="Factory time">--:--</span>
-        <span id="link" class="link off">Connecting…</span>
       </div>
     </div>
     <div class="finish" aria-hidden="true" title="&#127937; ?"></div>
@@ -103,29 +109,29 @@
       <p class="page-sub">Build your factory here, then press Start: its stations and materials, the track, and the
         keys the car and the stations log in with.</p>
       <div id="setup-note"></div>
-      <section class="ctl factory-card" aria-labelledby="fac-title">
-        <h3 id="fac-title">Stations and materials</h3>
-        <p>What your factory makes with: each material has a rack in the warehouse (W-A, W-B…), and each station uses
-          one or more of them. Then draw them on the track below.</p>
-        <div id="setup-factory"><p class="quiet">Loading…</p></div>
+      <!-- first what matters every day: is it running, and who is it waiting for -->
+      <section class="ctl run-bar" aria-labelledby="mode-title">
+        <h3 id="mode-title">Run</h3>
+        <div id="setup-mode"></div>
       </section>
-      <section class="ctl track-card" aria-labelledby="trk-title">
-        <h3 id="trk-title">Track</h3>
+      <!-- then the three steps to build the factory, in order -->
+      <details class="ctl step-card factory-card" open>
+        <summary><h3 id="fac-title"><span class="step">1</span>Stations and materials</h3></summary>
+        <p>What your factory makes with: each material has a rack in the warehouse (W-A, W-B…), and each station uses
+          one or more of them. Then draw them on the track (step 2).</p>
+        <div id="setup-factory"><p class="quiet">Loading…</p></div>
+      </details>
+      <section class="ctl step-card track-card" aria-labelledby="trk-title">
+        <h3 id="trk-title"><span class="step">2</span>Track</h3>
         <div id="setup-track"></div>
         <div id="editor" hidden></div>
       </section>
-      <div class="setup-grid">
-        <section class="ctl" aria-labelledby="mode-title">
-          <h3 id="mode-title">Run</h3>
-          <div id="setup-mode"></div>
-        </section>
-        <section class="ctl" aria-labelledby="dev-title">
-          <h3 id="dev-title">Devices</h3>
-          <p>The car and each station log in to the laptop's broker with their own key: the real ones, or the
-            Carkaroo Simulator for practice. A device turns green as soon as it sends its first message.</p>
-          <div id="setup-devices"></div>
-        </section>
-      </div>
+      <section class="ctl step-card" aria-labelledby="dev-title">
+        <h3 id="dev-title"><span class="step">3</span>Devices</h3>
+        <p>The car and each station log in to the laptop's broker with their own key: the real ones, or the
+          Carkaroo Simulator for practice. A device turns green as soon as it sends its first message.</p>
+        <div id="setup-devices"></div>
+      </section>
     </section>
 
     <!-- Map: the factory floor, live, with what Roo is doing and the AI's next choice -->
@@ -153,11 +159,11 @@
       <p class="page-sub">What every station has left, measured by its load cells. The line shows the safety level.</p>
       <div class="idle-slot"></div>
       <div id="station-list" class="station-grid"></div>
+      <h2 class="section-title"><span>Warehouse</span></h2>
+      <div id="warehouse" class="warehouse"></div>
       <h2 class="section-title"><span>Play</span></h2>
       <p class="page-sub play-sub">Change what the AI sees, then watch it react on the <a href="#map">Map</a>.</p>
       <div id="controls" class="controls"></div>
-      <h2 class="section-title"><span>Warehouse</span></h2>
-      <div id="warehouse" class="warehouse"></div>
     </section>
 
     <!-- History: totals, alerts and what happened, one card per delivery -->

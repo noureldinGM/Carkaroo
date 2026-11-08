@@ -25,7 +25,7 @@
   background: linear-gradient(90deg, transparent, var(--signal) 30% 70%, transparent);
   animation: kerb-streak 520ms var(--ease) forwards; }
 @keyframes kerb-streak { from { opacity: 1; transform: scaleX(1.5); } to { opacity: 0; transform: scaleX(1); } }
-.status { margin-left: auto; display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+.status { margin-left: auto; display: flex; align-items: center; gap: 12px; white-space: nowrap; min-width: 0; }
 .clock { font: 500 14px var(--mono); color: var(--ink-2); }
 .brand { text-decoration: none; }
 .brand .roo-logo { --size: 31px; }
@@ -219,6 +219,7 @@ table.rank { width: 100%; border-collapse: collapse; font-size: 14px; }
 .controls { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 .ctl .row { display: flex; flex-wrap: wrap; gap: 8px; }
 .map-controls { margin-top: 18px; }
+.map-controls .floor-hint { margin: 0; font-size: 13px; color: var(--ink-2); }
 
 /* ---------- before the first answer, and before login ---------- */
 body.booting main, body.booting .tabs, body.booting .extra { visibility: hidden; }
@@ -229,15 +230,32 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
 .extra summary { list-style: none; cursor: pointer; font: italic 700 18px var(--display); text-transform: uppercase;
   letter-spacing: .04em; color: var(--ink-2); padding: 6px 10px; border-radius: 4px; }
 .extra summary::-webkit-details-marker { display: none; }
-.extra summary::after { content: " ▾"; font-style: normal; font-size: 12px; }
+/* a drawn chevron (the "▾" character fell back to a dash in the display font) */
+.extra summary::after, .factory-chip summary::after { content: ""; display: inline-block; width: 6px; height: 6px; margin: 0 2px 3px 8px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg);
+  transition: transform var(--fast); vertical-align: middle; }
+.extra[open] summary::after, .factory-chip[open] summary::after { transform: rotate(-135deg); margin-bottom: -1px; }
 .extra summary:hover, .extra[open] summary { color: var(--ink); }
 .extra-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 10; display: grid; min-width: 200px; padding: 6px;
   background: var(--card); border: var(--stroke) solid var(--outline); border-radius: var(--radius-md); box-shadow: var(--kerb); }
 .extra-menu a, .extra-menu button { text-align: left; padding: 8px 10px; border-radius: 6px; color: var(--ink); text-decoration: none;
   font-size: 14px; background: none; box-shadow: none; }
 .extra-menu a:hover, .extra-menu button:hover, .extra-menu a[aria-current="page"] { background: var(--paper); }
-.factory-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; max-width: 280px; }
-.factory-chip b { font: italic 700 17px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the factory's name, with Switch factory in a small menu */
+.factory-chip { position: relative; }
+.factory-chip summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; max-width: 220px;
+  padding: 4px 10px; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1.5px var(--line-2); }
+.factory-chip summary::-webkit-details-marker { display: none; }
+.factory-chip summary:hover, .factory-chip[open] summary { box-shadow: inset 0 0 0 2px var(--ink); }
+.factory-chip b { font: italic 700 17px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.factory-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; padding: 8px; background: var(--card);
+  border: var(--stroke) solid var(--outline); border-radius: var(--radius-md); box-shadow: var(--kerb); white-space: nowrap; }
+/* one pill: running/stopped, the factory time and Roo online */
+.run-pill { display: inline-flex; align-items: center; gap: 10px; padding: 3px 12px 3px 3px; border-radius: 999px;
+  background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line-2); }
+.run-pill .clock { font-size: 13px; }
+.run-pill .link { font-size: 12px; }
+.run-pill:has(.mode-pill[hidden]) { padding-left: 12px; }
 .mode-pill.stopped { background: var(--line); color: var(--ink-2); }
 
 /* ---------- Login and Start ---------- */
@@ -280,7 +298,18 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
 .ai-explain p { margin: 6px 0 0; font-size: 14px; color: var(--ink-2); }
 
 /* ---------- Setup ---------- */
-.setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+/* the Run bar first, then the numbered steps; step 1 folds */
+.run-bar { margin-bottom: 16px; box-shadow: var(--kerb); }
+.step-card { margin-bottom: 16px; }
+.step-card h3 { display: flex; align-items: center; gap: 10px; }
+.step { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--signal); color: var(--signal-ink); font: italic 700 16px var(--display); }
+details.step-card > summary { list-style: none; cursor: pointer; }
+details.step-card > summary::-webkit-details-marker { display: none; }
+details.step-card > summary h3::after { content: "Fold"; margin-left: auto; font: 600 12px var(--sans); color: var(--muted); }
+details.step-card:not([open]) > summary h3::after { content: "Open"; }
+details.step-card:not([open]) > summary h3 { margin-bottom: 0; }
+details.step-card > summary:hover h3::after { color: var(--ink); }
 #setup-note .alert { margin-bottom: 14px; max-width: none; }
 .modes { display: grid; gap: 10px; margin: 6px 0 14px; }
 .mode { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; padding: 12px 14px;
@@ -391,16 +420,16 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
 .fe-mat > .mat { align-self: center; }
 .fe-name, .fe-num { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
 .fe-name input, .fe-num input { width: 100%; min-width: 0; }
-.fe-sts { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; margin-bottom: 10px; }
-.fe-st { border: 1.5px solid var(--line-2); border-radius: var(--radius-md); padding: 10px 12px; }
+.fe-sts { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 12px; margin-bottom: 10px; }
+.fe-st { min-width: 0; border: 1.5px solid var(--line-2); border-radius: var(--radius-md); padding: 10px 12px; }
 .fe-st header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 .fe-st .sid { font: 13px var(--mono); color: var(--muted); }
-.fe-st-name { flex: 1; min-width: 0; font-weight: 600; }
+.fe-st-name { flex: 1; min-width: 0; width: 100%; font-weight: 600; }
 .fe-st select { font-size: 13px; }
 .fe-use { padding: 6px 0; border-top: 1px dashed var(--line); }
 .fe-tick { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
 .fe-use:not(.on) .fe-tick { color: var(--muted); }
-.fe-nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 6px 0 2px 26px; }
+.fe-nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 6px 0 2px 26px; }
 .fe-save { align-items: center; margin-top: 14px; gap: 10px; }
 .fe-state { font-size: 13px; color: var(--good); }
 .fe-state.unsaved { color: var(--warn); font-weight: 500; }
@@ -409,8 +438,9 @@ body.logged-out .tabs, body.logged-out .extra, body.logged-out .clock { display:
   .fe-mat { grid-template-columns: 30px 1fr 1fr; }
   .fe-mat .fe-name { grid-column: 2 / 4; }
   .fe-mat button { grid-column: 1 / 4; justify-self: start; }
-  .fe-nums { grid-template-columns: 1fr 1fr; }
-  .fe-sts { grid-template-columns: 1fr; }
+  .fe-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-left: 0; }
+  .fe-sts { grid-template-columns: minmax(0, 1fr); }
+  .fe-st header { flex-wrap: wrap; }
 }
 
 /* ---------- Roo the pet: its lane is along the bottom of every page (design/roo.css) ---------- */
@@ -420,6 +450,8 @@ body { padding-bottom: 104px; }              /* room for Roo and its bubble unde
 
 @media (max-width: 600px) {
   .status { flex-wrap: wrap; white-space: normal; gap: 8px; row-gap: 6px; }
+  .run-pill { gap: 8px; }
+  .run-pill .link { font-size: 0; gap: 0; }   /* only the dot: green = Roo online */
   .factory-chip { max-width: 100%; }
   .factory-chip b { max-width: 150px; }
 }

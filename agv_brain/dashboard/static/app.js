@@ -229,7 +229,11 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 // close the Extra menu when clicking anywhere else
-document.addEventListener("click", (ev) => { if (!ev.target.closest("#extra")) $("#extra").open = false; });
+// close the More and factory menus when clicking anywhere else
+document.addEventListener("click", (ev) => {
+  if (!ev.target.closest("#extra")) $("#extra").open = false;
+  if (!ev.target.closest("#factory-chip")) $("#factory-chip").open = false;
+});
 
 function placeMap() {
   if (!layout) return;
@@ -577,6 +581,15 @@ function renderHero(dec, state) {
     hero.innerHTML = `${taskHero(state)}<p class="car">${batteryText(state)}</p>`;
     return;
   }
+  if (!state.car.online) {                   // nothing moves until the car logs in: say that first
+    hero.innerHTML = `
+      <div class="label eyebrow">Roo now</div>
+      <h1>Roo is offline</h1>
+      <p class="why">Nothing moves until the car logs in with its key (Setup → Devices), or connect the Carkaroo
+        Simulator to practise. The AI keeps deciding meanwhile.</p>
+      ${carLine(state)}`;
+    return;
+  }
   const label = "The AI's choice";
   const offline = !state.car.online
     ? `<p><span class="badge crit">Roo is offline: nothing moves until the car connects (see Setup → Devices)</span></p>` : "";
@@ -626,12 +639,12 @@ function carLine(state) {
 // under the big line: the AI's next choice while Roo is busy, else a link to the full order
 function renderNext(dec, state) {
   const q = ordered(dec);
-  const busy = !!(state.car.online && state.car.task);
+  const busy = !!(state.car.online && state.car.task), offline = !state.car.online;
   const more = (n) => n > 0 ? `<p class="more">${plural(n, "more request")} waiting · <a href="#ai">see the AI's full order</a></p>` : "";
-  if (!busy || !q.length) { setHtml($("#next"), more(q.length - 1)); return; }
+  if ((!busy && !offline) || !q.length) { setHtml($("#next"), more(q.length - 1)); return; }
   const first = q[0];
   setHtml($("#next"), `<div class="up-next">
-      <div class="nx-label">Next, when Roo is free</div>
+      <div class="nx-label">${offline ? "The AI's choice, when Roo connects" : "Next, when Roo is free"}</div>
       <p class="nx"><span>Bring</span>${chip(first.material)}<span>to ${esc(first.station_name)}</span></p>
       <p class="nx-why"><span class="${first.slack_s < 60 ? "urgent" : ""}">runs out in ${fmtS(first.stockout_s)}</span>
         · trip ${fmtS(first.trip_s)}</p>
@@ -831,8 +844,8 @@ function buildControls() {
     <div class="ctl"><h3>Obstacle</h3>
       <p>Click a line on the map to block it for 60 s. The car stops, waits 10 s, then the AI finds another way.</p>
       <button class="ghost" id="clr">Remove all obstacles</button></div>`
-    : `<div class="ctl"><h3>Obstacles</h3><p>Put something in front of the car's ultrasonic sensor (or use the
-      Carkaroo Simulator's obstacle). After 10 s the AI sends it another way.</p></div>`;
+    : `<p class="floor-hint"><b>Obstacles:</b> put something in front of Roo's ultrasonic sensor (or use the
+      Carkaroo Simulator's obstacle). After 10 s the AI sends it another way.</p>`;
   $("#controls").innerHTML = `
     <div class="ctl"><h3>Ask for a delivery</h3>
       <p>Add a request by hand and see where the AI puts it.</p>

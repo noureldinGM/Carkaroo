@@ -42,7 +42,8 @@ and each pretend device logs in to the broker with its own ID and key, exactly l
    simulator**, paste it into the simulator's **Connect** box and press **Connect all**. You can also type each key
    by hand, like you will in the firmware. A wrong key is refused, like on the real car.
 4. Each device turns green on the Carkaroo website, the Run card says *"Everything is online"*, and Roo starts to
-   drive on the Map.
+   drive on the Map. On the simulator, the Connect card folds to one line (*"5 of 5 connected ✓"*), and the page is
+   now the pretend floor (Roo seen from above), with the devices and the play controls beside it.
 5. Play on the simulator: drain the car's battery, put an obstacle on a line (click the pretend floor), set a
    station's load cell, or **Disconnect** a device to pull its plug. Watch the Carkaroo website react.
 
@@ -59,17 +60,20 @@ The look comes from the **Carkaroo design system** in [`design/`](../design/READ
 **Login:** one field, the factory's name. A new name makes a new factory (it starts as a copy of the sample
 factory, so it can run at once); a name used before opens that factory again, and the factories made before are
 listed as buttons. Each factory keeps its own track in `config/factories/<name>/` (this laptop only,
-git ignores it). The header shows the factory's name and **Switch factory**, which goes back to the login page.
+git ignores it). The header shows the factory's name; click it for **Switch factory**, which goes back to the login page.
 
 **Start** (right after login): two big choices, **Start my factory** (the AI starts and waits for the devices) or
 **Set up my factory** (opens Setup), and a pointer to the Carkaroo Simulator for practice.
 
-The tabs are **Setup** (home), **Map**, **Stations** and **History**. The **Extra** menu holds **The AI, explained**
-and the design system. While nothing runs, the Map, Stations, History and AI pages say *"The factory is stopped"*
-with a **Start** button, and the pill next to the clock says **Stopped** (or **Running**).
+The header is one row: the tabs **Setup** (home), **Map**, **Stations** and **History**; the **More** menu (**The AI,
+explained** and the design system); the factory's name; one pill with **Running** or **Stopped**, the factory time and
+a dot for Roo (green = online); and the light/dark button. While nothing runs, the Map, Stations, History and AI
+pages say *"The factory is stopped"* with a **Start** button.
 
-**Setup** (home):
-- **Stations and materials:** build your factory. Each material (up to 5, letters A to E) has a name, how many units
+**Setup** (home) puts what matters every day first, then the three steps to build the factory, in order:
+- **Run** (at the top): which track, **Start** and **Stop** (and *Use this track* while it runs). While it runs, it
+  lists the devices the AI is still waiting for, until *"Everything is online"*.
+- **1 Stations and materials** (*Fold* closes it once your factory is built): build your factory. Each material (up to 5, letters A to E) has a name, how many units
   go in one box (one trip) and how many the warehouse holds when full; its rack is W-A, W-B… Each station (up to 8,
   S1 to S8) has a name, a priority (high, medium, low) and ticks the materials it uses, each with how much it holds,
   its safety level, its stock at the start and how many it uses per minute. *Save* checks everything (for example
@@ -78,12 +82,7 @@ with a **Start** button, and the pill next to the clock says **Stopped** (or **R
   note at the top of Setup lists what is missing and Start waits until the track has it. Saved in
   `config/factories/<name>/materials.yaml`, the same format as `config/materials.yaml`. The AI works with any
   stations: the ML ranker only looks at times, stock and priority, never at names.
-- **Run:** which track, **Start** and **Stop** (and *Use this track* while it runs). While it runs, it lists the
-  devices the AI is still waiting for, until *"Everything is online"*.
-- **Devices:** the car and each station, online or offline. *Connect* shows what goes in the firmware: the laptop's
-  address and port, the username (the device ID), its **key** (*Show*, *Copy*, *New key*), its topics and a code
-  line. **Copy all for the simulator** copies the address, the port and every key, for the Carkaroo Simulator.
-- **Track:** *Edit this track* or *Start an empty track* opens the editor. Draw on a 10 cm grid:
+- **2 Track:** *Edit this track* or *Start an empty track* opens the editor. Draw on a 10 cm grid:
   - *Line* draws straight lines point by point;
   - *Junction*, *Rack*, *Station* and *Dock* place points (a point dropped on a line splits it);
   - *Move* drags points, and clicking a line there lets you give the real length of a curved line;
@@ -93,6 +92,9 @@ with a **Start** button, and the pill next to the clock says **Stopped** (or **R
   *"Rack W-C for C is missing"*, *"S4 cannot be reached from rack W-C"*). Saving is possible only when it says
   *Ready*; saving under the name of a track that already exists asks first. *Save and use it* makes the factory use
   the new track (at once if it is running). Tracks are saved in `config/tracks/`.
+- **3 Devices:** the car and each station, online or offline. *Connect* shows what goes in the firmware: the laptop's
+  address and port, the username (the device ID), its **key** (*Show*, *Copy*, *New key*), its topics and a code
+  line. **Copy all for the simulator** copies the address, the port and every key, for the Carkaroo Simulator.
 
 **Map:**
 - what Roo is doing right now, in one sentence: *"Carrying B to Packaging"* or *"Fetching C for Quality lab"*, with
@@ -100,29 +102,30 @@ with a **Start** button, and the pill next to the clock says **Stopped** (or **R
 - while Roo is busy, a small **Next, when Roo is free** box: the AI's next choice, when it runs out, the trip time,
   and **✓ Best possible choice** when the examiner (the exact optimizer) agrees, or **≈ Almost best** with how much
   more it costs; when Roo is free, the AI's choice is the big line instead;
-- if the real car is offline, a red note says nothing moves until it connects, and the battery shows "–";
+- if the car is offline, that is the big line (*"Roo is offline"*: nothing moves until it connects), the AI's choice
+  waits in the small box (*"The AI's choice, when Roo connects"*), and the battery shows "–";
 - the factory floor: the robot car moving on the track. The yellow band is its route; dotted is the part after the
   pickup. A station with a yellow border is waiting for a delivery, red means it has stopped. The dot shows its
   stock: green OK, yellow low, red empty;
-- obstacles come from the car's ultrasonic sensor (or the simulator's obstacle): the car stops, and after 10 s
-  the AI sends it another way.
+- a one-line hint under the floor: obstacles come from the car's ultrasonic sensor (or the simulator's obstacle);
+  the car stops, and after 10 s the AI sends it another way.
 
 If requests are waiting but none can be served (for example the warehouse has less than one box left, or a line is
 blocked), the top says *"Can't serve the waiting requests"* and lists the reasons.
 
 **Stations:** one card per station with a stock bar per material (the yellow tick is the safety level), "runs out
 in …", and tags for *on the way* and *stopped*. Below:
+- **Warehouse**, in boxes per material. The warehouse has no sensor: the AI counts every box the car takes, so after
+  restocking a rack, press its **Refilled** button (it goes back to the full stock set on the Setup page).
 - **Play** (the capstone asks to show outputs changing with inputs): **Ask for a delivery** (a manual request: see
   where the AI puts it). The stock readings come from the stations' load cells, or from the simulator's
   *A station's load cell* (set Packaging / B to 1 there and watch it jump to the top here). A request the AI cannot take says why (*"Packaging does not use
   that material"*, *"already asked for"*).
-- **Warehouse**, in boxes per material. The warehouse has no sensor: the AI counts every box the car takes, so after
-  restocking a rack, press its **Refilled** button (it goes back to the full stock set on the Setup page).
 
 **History:** the totals so far (deliveries, how long production lines were stopped, battery), alerts, and what
 happened: one card per delivery (task, pickup, delivered), with the other events in between.
 
-**The AI, explained** (under Extra): why there is an AI at all, in three boxes. The examiner (an exact optimizer)
+**The AI, explained** (under More): why there is an AI at all, in three boxes. The examiner (an exact optimizer)
 tries every order of the deliveries, so it always finds the best one, but the number of orders explodes (7 requests:
 5,040; 10: 3.6 million; 15: 1.3 trillion), so it only runs up to 7 requests. The AI (an ML ranker) learned from the
 examiner's answers and decides in about 40 ms however many requests wait. A real factory runs only the AI; the

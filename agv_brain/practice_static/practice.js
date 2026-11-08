@@ -22,6 +22,7 @@ const pet = Roo.pet($("#roo-pet"), {
 });
 pet.show();
 let curiousUntil = 0;
+let wasAll = false;             // everything was connected at the last poll
 function petLine() {
   if (!st || !st.factory) return ["happy", "Pick the factory I should pretend to be."];
   const n = st.devices.length, on = st.devices.filter((d) => d.state === "on").length;
@@ -90,6 +91,15 @@ function render() {
         : Object.entries(d.stock || {}).map(([m, v]) => `${m}: ${v}`).join(" · ");
   }
   drawCar();
+  // the Connect card: a one-line summary, folded the moment everything is connected
+  const n = s.devices.length, on = s.devices.filter((d) => d.state === "on").length;
+  const sum = $("#conn-sum");
+  sum.textContent = !s.factory ? "Choose a factory" : `${on} of ${n} connected${on === n && n ? " ✓" : ""}`;
+  sum.classList.toggle("ok", !!n && on === n);
+  const all = !!n && on === n;
+  if (all && !wasAll) $("#connect-box").open = false;
+  if (!on && wasAll) $("#connect-box").open = true;
+  wasAll = all;
   const [mood, line] = petLine();
   pet.set(mood, line);
 }
