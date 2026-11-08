@@ -869,7 +869,7 @@ async function loadSetup() {
     setup = await r.json();
   } catch (e) { return; }
   const shape = JSON.stringify([setup.track, setup.local, setup.broker.ok, setup.running, setup.track_problems,
-    setup.tracks.map((x) => x.id), setup.devices.map((d) => [d.id, d.key])]);
+    setup.key_error, setup.tracks.map((x) => x.id), setup.devices.map((d) => [d.id, d.key])]);
   if (shape !== setupShape) { setupShape = shape; buildSetup(); }
   updateDevices();
   if (setup.factory) FactoryEditor.load(setup.factory.id, !setup.local);
@@ -882,6 +882,7 @@ function buildSetup() {
       stations cannot connect and the factory cannot start.</b> ${esc(b.error || "")}</div>` : "")
     + (readOnly ? `<div class="alert">You are looking from another device, so this page is read-only and the keys are hidden.
         Make changes on the laptop.</div>` : "")
+    + (s.key_error ? `<div class="alert crit">${esc(s.key_error)}</div>` : "")
     + (s.track_problems.length ? `<div class="alert crit"><b>The track does not fit your stations yet</b>, so the factory
         cannot start. Open the track editor below and fix:<ul>${s.track_problems.slice(0, 5).map((p) =>
         `<li>${esc(p)}</li>`).join("")}</ul></div>` : "");

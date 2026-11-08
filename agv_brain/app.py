@@ -58,6 +58,7 @@ class App:
         self.layout: dict = {}
         self.layout_version = 0
         self.seen: dict[str, float] = {}     # device id -> wall time of its last message
+        self.key_error: str | None = None    # why the broker could not give the stations keys
         self._lock = threading.RLock()
         bus.subscribe(P.car_status("+"), self._on_device)
         bus.subscribe(P.station_stock("+"), self._on_device)
@@ -118,12 +119,24 @@ class App:
             self.track = factory["track"]
         except (ValueError, FileNotFoundError):
             self.track = "sample"            # a track that was deleted: fall back to the sample
-        self._sync_broker()
+        try:
+            self._sync_broker()
+        except ValueError:
+            pass                             # opening still works; Setup shows key_error
 
-    def _sync_broker(self) -> None:
-        """Give every station of the open factory a key (stations can be added on the Setup page)."""
-        if self.broker and hasattr(self.broker, "set_stations"):
-            self.broker.set_stations(list(self.settings.stations))
+    def _sync_broker(self, ids: list[str] | None = None) -> None:
+        """Give every station of the open factory a key (stations can be added on the Setup page).
+        Raises ValueError in plain words if the broker refuses a station ID (and keeps its old list)."""
+        ids = list(self.settings.stations) if ids is None else ids
+        if not (self.broker and hasattr(self.broker, "set_stations")):
+            return
+        try:
+            self.broker.set_stations(ids)
+            self.key_error = None
+        except ValueError as exc:
+            self.key_error = ("The broker could not make keys for these stations, so they cannot log in: "
+                              f"{exc}. Station IDs are S1 to S8.")
+            raise ValueError(self.key_error) from None
 
     def login(self, name) -> dict:
         """Open the factory with this name (or make it). Whatever ran before stops."""
@@ -174,9 +187,10 @@ class App:
         with self._lock:
             if not self.factory:
                 raise ValueError("Open a factory on the login page first.")
+            checked = factories.check_settings(data)
+            self._sync_broker(list(checked["stations"]))   # refused IDs: nothing is saved
             factories.save_settings(self.factory["id"], data)
             self.settings = load_settings(self.materials)
-            self._sync_broker()
             problems = self.track_problems()
             if self.session:
                 self.stop_session()
@@ -299,6 +313,7 @@ class App:
                 d["key"] = b.keys.get(d["id"])
         return {"mode": self.mode, "mode_name": MODE_NAMES[self.mode], "modes": MODE_NAMES,
                 "running": self.running, "factory": self.factory_info(), "track_problems": self.track_problems(),
+                "key_error": self.key_error,
                 "track": self.track, "speed": self.speed, "tracks": tracks.list_tracks(),
                 "local": local, "broker": {"ok": b is not None, "error": self.broker_error,
                                            "port": b.port if b else None, "addresses": addrs,
