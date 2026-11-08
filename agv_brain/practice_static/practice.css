@@ -47,7 +47,19 @@ textarea { width: 100%; box-sizing: border-box; font: 13px var(--mono); margin-b
 .floor-svg .blocked { stroke: var(--stop); stroke-width: 8; stroke-dasharray: 8 6; stroke-linecap: round; pointer-events: none; }
 .floor-svg .node { fill: var(--mat-tape); }
 .floor-svg .label { fill: #1c1d1a; font: italic 700 14px var(--display); }
-.floor-svg .car { fill: var(--signal); stroke: #121314; stroke-width: 2; transition: transform .6s linear; }
+/* Roo seen from above, as on the Carkaroo website's map */
+.floor-svg .roo-top { transition: transform .6s linear; pointer-events: none; }
+.floor-svg .rt-body { fill: var(--roo); stroke: #000; stroke-width: 1.5; }
+.floor-svg .rt-stripe { fill: var(--signal); }
+.floor-svg .rt-motor { fill: var(--signal); stroke: #121314; stroke-width: 1; }
+.floor-svg .rt-tire { fill: var(--tire, #121314); }
+.floor-svg .rt-eye { fill: #f4f5f5; stroke: var(--chrome); stroke-width: 2; }
+.floor-svg .rt-pupil { fill: #1c1d1a; }
+.floor-svg .roo-top.low .rt-body { fill: var(--offline); }
+
+/* Roo the pet lives in a lane along the bottom (design/roo.css) */
+body { padding-bottom: 104px; }
+.top .finish { cursor: pointer; }            /* a secret lives here */
 
 @media (max-width: 860px) {
   .grid { grid-template-columns: 1fr; }

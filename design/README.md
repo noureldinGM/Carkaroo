@@ -59,7 +59,7 @@ Taglines (one per piece):
 
 ### Roo, the main character
 
-Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, the logo's eyes and Roo in the corner of every page show it (Roo rolls along when you change page, and takes a lap across the screen with a box from the checkered-flag button), and Roo says one short line:
+Roo is alive on the website and on the Carkaroo Simulator (`roo.js` + `roo.css`, preview at **/design/roo-moods.html**). The live data picks one mood, and the logo's eyes and Roo the pet show it. Roo says one short line:
 
 | Mood | When |
 | --- | --- |
@@ -75,7 +75,16 @@ Roo is alive on the website (`roo.js` + `roo.css`, preview at **/design/roo-mood
 | Happy | everything is stocked |
 | Curious | you just changed something with the play controls (Stations or Map page) |
 
-You can play with Roo: **tap** (boop), **tap 5 times** (dizzy), **hold** (revs the engine, then zooms off and back), **drag** (it rides along and rolls back), **rub it with the mouse** (it giggles). The logo **winks** when clicked. Left alone, Roo looks around, hums, stretches, yawns after 30 s and naps after a minute; it looks for you when the pointer leaves the page. A **Refilled** press gets hearts. In the serious moods (offline, blocked, a line stopped) Roo doesn't play: it answers plainly. Moods only move the eyes, the antenna and small effects; the car is never redrawn. "Reduce motion" turns the animations off.
+**Roo the pet** (`Roo.pet`) lives in its own lane, a dashed line along the bottom of every page, so it never sits on a card. It:
+- **drives in** from the edge when the page opens (it never pops in), and on the website the big Roo of the login page drives down into the lane when you log in;
+- **wanders** to a new spot every 8–20 s, then looks around; its wheels turn, it faces the way it drives, and its bubble waits until it has parked;
+- **comes closer** when the pointer is near the lane (but never under it), and drives under the tab you open;
+- has **a job on each page**: Setup, who it is still waiting for; Map, what it is doing; Stations, which station runs out first; History, the totals; on the Simulator, what to do next;
+- **parks** in the serious moods and just says what is wrong; a new line shows at most every 5 s, so the bubble never flickers.
+
+There is no button for Roo's lap: it is a secret for people who look closely at the racetrack. (Hint: the start/finish line likes being clicked, three times.)
+
+You can play with Roo: **tap** (boop), **tap 5 times** (dizzy), **hold** (revs the engine, then zooms off and back), **drag** (it rides along; the pet stays where you let go), **rub it with the mouse** (it giggles). The logo **winks** when clicked. Left alone, Roo looks around, hums, stretches, yawns after 30 s and naps after a minute; it looks for you when the pointer leaves the page. A **Refilled** press gets hearts. In the serious moods (offline, blocked, a line stopped) Roo doesn't play: it answers plainly. Moods only move the eyes, the antenna and small effects; the car is never redrawn. "Reduce motion" turns the animations off.
 
 ## 3. Color
 

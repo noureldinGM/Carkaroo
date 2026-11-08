@@ -28,48 +28,67 @@ const obstacles = new Map();  // "A|B" -> sim time it disappears (obstacles this
 let lastTs = 0;
 let lastSnap = null;
 
-// ---------- Roo: the logo's eyes and Roo in the corner of every page react to the live data (design/roo.js) ----------
+// ---------- Roo: the logo's eyes and Roo the pet react to the live data (design/roo.js) ----------
+// Roo lives in a lane along the bottom of every page, wanders, and says one line that fits the open page.
+// The secret: click the checkered finish strip under the header 3 times and Roo takes a lap with a box.
 const rooLogo = Roo.logo($("#logo"));
-const rooBuddy = Roo.buddy($("#roo-buddy"));
 const rooLogin = Roo.buddy($("#roo-login"));
 const rooMem = {};
-function renderRoo(d) {
-  if (!d.factory && d.setup) { rooLogo.set("happy"); rooLogin.set("happy", "Hi! I'm Roo. What's your factory called?"); return; }
-  if (!d.running) { rooLogo.set("asleep"); rooBuddy.set("asleep", "Nothing is running. Press Start and I'll get going."); return; }
-  const r = Roo.read(d, rooMem);
-  rooLogo.set(r.mood);
-  rooBuddy.set(r.mood, r.say);
-}
-// Roo rolls a little when you change page (it comes along with you)
-const dock = $("#roo-dock");
-const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-function rooRoll() {
-  if (calm() || dock.classList.contains("lapping")) return;
-  dock.classList.remove("roll"); void dock.offsetWidth; dock.classList.add("roll");
-}
-// Roo's lap: pick up a box, drive off the right edge, come back across the whole screen to its spot
-function rooLap() {
-  if (dock.classList.contains("lapping")) return;
+function lapCargo() {                      // the box Roo carries on its lap: one of this factory's materials
   const mats = layout ? Object.keys(layout.materials) : ["A", "B", "C"];
   const m = mats[Math.floor(Math.random() * mats.length)];
-  const name = layout && layout.materials[m] ? layout.materials[m].name : m;
-  const cargo = dock.querySelector(".roo-cargo");
-  cargo.className = `roo-cargo mat ${m}`;
-  cargo.textContent = m;
-  $("#extra").open = false;
-  if (calm()) { rooBuddy.play("love", 1800, `Here's a box of ${name}!`); return; }
-  dock.classList.remove("roll");
-  dock.classList.add("lapping");
-  rooBuddy.play("lap", Infinity, "");
-  const done = (ev) => {
-    if (ev.target !== dock) return;            // Roo's own little animations bubble up too
-    dock.removeEventListener("animationend", done);
-    dock.classList.remove("lapping");
-    rooBuddy.play("love", 2000, `Special delivery: ${name}! Lap done.`);
-  };
-  dock.addEventListener("animationend", done);
+  return { letter: m, name: layout && layout.materials[m] ? layout.materials[m].name : m };
 }
-document.addEventListener("click", (ev) => { if (ev.target.closest("[data-lap]")) rooLap(); });
+const rooPet = Roo.pet($("#roo-pet"), { secret: ".top .finish", cargo: lapCargo });
+let loginAt = 0;                         // a snapshot from before the login must not send Roo away again
+
+// Roo's job on each page, in one short line (the Map page uses the live line from Roo.read)
+function pageLine(d, r) {
+  const st = d.state;
+  if (page === "setup") {
+    const off = setup && setup.devices ? setup.devices.filter((x) => !x.online) : [];
+    if (!off.length) return "Everyone is online. I'm on the job!";
+    const first = off[0].kind === "car" ? "me" : off[0].id;
+    return off.length === 1 ? `Waiting for ${first} to log in.` : `Waiting for ${first} and ${off.length - 1} more to log in.`;
+  }
+  if (!st) return r.say;
+  if (page === "stations") {
+    let low = null;
+    for (const [sid, s] of Object.entries(st.stations))
+      for (const [m, v] of Object.entries(s.materials))
+        if (v.stock > 0 && Number.isFinite(v.stockout_s) && (!low || v.stockout_s < low.t)) low = { t: v.stockout_s, name: s.name || sid, m };
+    return low ? `${low.name} runs out of ${low.m} first, in ${fmtS(low.t)}.` : r.say;
+  }
+  if (page === "history") {
+    const stop = Object.values(st.stations).reduce((acc, s) =>
+      acc + Object.values(s.materials).reduce((x, v) => x + v.stopped_s, 0), 0);
+    const n = st.stats ? st.stats.deliveries : 0;
+    return `${n} ${n === 1 ? "delivery" : "deliveries"} so far, lines stopped ${fmtS(stop)}.`;
+  }
+  if (page === "ai") return "The examiner checks every choice I make, live.";
+  return r.say;
+}
+
+function renderRoo(d) {
+  if (!d.factory && d.setup) {               // the login page has the big Roo; the pet waits off-screen
+    rooLogo.set("happy"); rooLogin.set("happy", "Hi! I'm Roo. What's your factory called?");
+    if (Date.now() - loginAt > 3000) rooPet.hide();
+    return;
+  }
+  rooPet.show();
+  if (!d.running) { rooLogo.set("asleep"); rooPet.set("asleep", "Nothing is running. Press Start and I'll get going."); return; }
+  const r = Roo.read(d, rooMem);
+  rooLogo.set(r.mood);
+  // in the serious moods Roo says what is wrong, on every page
+  rooPet.set(r.mood, ["asleep", "shocked", "sad"].includes(r.mood) ? r.say : pageLine(d, r));
+}
+// changing page: Roo drives under the open tab
+function rooVisit() {
+  rooPet.fresh();
+  if (lastSnap) renderRoo(lastSnap);
+  const a = document.querySelector(".tabs a[aria-current='page']");
+  if (a) rooPet.visit(a);
+}
 
 // the play controls: Roo gets curious when you change something
 for (const id of ["#controls", "#map-controls"]) {
@@ -193,7 +212,7 @@ function route() {
   page = wanted();
   if (`#${page}` !== location.hash && !(page === "setup" && !location.hash)) history.replaceState(null, "", `#${page}`);
   if (page !== before) window.scrollTo(0, 0);
-  if (page !== before && before) rooRoll();
+  if (page !== before && before) setTimeout(rooVisit, 50);
   document.body.classList.remove("booting");
   document.body.classList.toggle("logged-out", !factory);
   document.querySelectorAll(".page").forEach((s) => { s.hidden = s.dataset.page !== page; });
@@ -267,7 +286,9 @@ async function login(name) {
   factory = r.data.factory;
   running = false;
   layout = null;              // the next snapshot rebuilds the map for this factory
-  rooBuddy.play("love", 1600, `Welcome to ${factory.name}!`);
+  loginAt = Date.now();
+  rooPet.arriveFrom($("#roo-login .car").getBoundingClientRect());   // the big Roo drives down into its lane
+  rooPet.play("love", 1600, `Welcome to ${factory.name}!`);
   location.hash = "#start";
   route();
 }
@@ -797,7 +818,7 @@ $("#warehouse").addEventListener("click", async (ev) => {
   if (!running) { toast("Start the factory first."); return; }
   if (await post("/api/refill", { material: m })) {
     toast(`Rack ${info.rack} refilled: ${info.full} ${m} (${Math.floor(info.full / info.box)} boxes).`);
-    rooBuddy.play("love", 1800, `Thanks for refilling ${m}!`);
+    rooPet.play("love", 1800, `Thanks for refilling ${m}!`);
   }
 });
 
@@ -1070,7 +1091,7 @@ async function poll() {
   } catch (e) {
     setLink(false, null);
     rooLogo.set("thinking");
-    rooBuddy.set("thinking", "I can't reach the AI. Is the app running?");
+    rooPet.set("thinking", "I can't reach the AI. Is the app running?");
   }
   setTimeout(poll, 300);
 }

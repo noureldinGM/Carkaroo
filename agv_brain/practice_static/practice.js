@@ -10,6 +10,32 @@ let floor = {};             // svg parts
 
 Roo.logo($("#logo"));
 
+// ---------- Roo the pet: lives in a lane along the bottom (design/roo.js), says what to do next ----------
+// The secret is the same as on the Carkaroo website: click the checkered finish strip 3 times.
+const pet = Roo.pet($("#roo-pet"), {
+  secret: ".top .finish",
+  cargo: () => {
+    const mats = st && st.layout ? Object.keys(st.layout.materials) : ["A", "B", "C"];
+    const m = mats[Math.floor(Math.random() * mats.length)];
+    return { letter: m, name: st && st.layout ? st.layout.materials[m].name : m };
+  },
+});
+pet.show();
+let curiousUntil = 0;
+function petLine() {
+  if (!st || !st.factory) return ["happy", "Pick the factory I should pretend to be."];
+  const n = st.devices.length, on = st.devices.filter((d) => d.state === "on").length;
+  const car = st.devices.find((d) => d.kind === "car");
+  if (!on) return ["happy", "Paste the keys from the Carkaroo website and I'll log in."];
+  if (car && car.state !== "on") return ["asleep", "My plug is pulled. Connect me again."];
+  if (car && (car.obstacles || []).length) return ["shocked", "Something is in my way. Watch the AI find another way."];
+  if (car && car.battery < 20) return ["sleepy", `Battery ${car.battery}%. The AI will send me to the dock.`];
+  if (Date.now() < curiousUntil) return ["curious", "Ooh! Let's see what the AI does with that."];
+  if (on < n) return ["happy", `${on} of ${n} connected. Keep going!`];
+  if (car && car.mode !== "IDLE") return ["driving", "Pretend-driving! Watch me on the Carkaroo website."];
+  return ["happy", "Everything is connected. Watch the Carkaroo website!"];
+}
+
 function esc(t) {
   return String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -64,6 +90,8 @@ function render() {
         : Object.entries(d.stock || {}).map(([m, v]) => `${m}: ${v}`).join(" · ");
   }
   drawCar();
+  const [mood, line] = petLine();
+  pet.set(mood, line);
 }
 
 function build() {
@@ -132,8 +160,18 @@ function buildFloor() {
     if (n.type !== "junction") sv("text", { x: n.x + 9, y: n.y - 8, class: "label" }, svg).textContent = n.id;
   }
   floor.pos = pos;
-  floor.car = sv("circle", { r: 11, class: "car", cx: 0, cy: 0 }, svg);
-  sv("title", {}, floor.car).textContent = "The pretend car";
+  // Roo seen from above, facing east before it turns: graphite body, yellow stripe and motors, two eyes in front
+  floor.car = sv("g", { class: "roo-top" }, svg);
+  floor.body = sv("g", {}, floor.car);
+  for (const y of [-19, 12]) sv("rect", { x: -13, y, width: 15, height: 7, rx: 2, class: "rt-tire" }, floor.body);
+  sv("rect", { x: -17, y: -12, width: 34, height: 24, rx: 6, class: "rt-body" }, floor.body);
+  sv("rect", { x: -17, y: -2, width: 28, height: 4, class: "rt-stripe" }, floor.body);
+  for (const y of [-13, 9]) sv("rect", { x: -11, y, width: 11, height: 4, rx: 1, class: "rt-motor" }, floor.body);
+  for (const y of [-5, 5]) {
+    sv("circle", { cx: 13, cy: y, r: 4, class: "rt-eye" }, floor.body);
+    sv("circle", { cx: 14.5, cy: y, r: 1.7, class: "rt-pupil" }, floor.body);
+  }
+  sv("title", {}, floor.car).textContent = "Roo, the pretend car";
   floor.car.style.display = "none";
 }
 
@@ -145,6 +183,8 @@ function drawCar() {
   if (on) {
     const p = floor.pos[car.node];
     floor.car.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    floor.body.setAttribute("transform", `rotate(${{ N: -90, E: 0, S: 90, W: 180 }[car.heading] ?? 0})`);
+    floor.car.classList.toggle("low", car.battery < 20);
   }
   floor.marks.innerHTML = "";
   for (const [a, b] of (car && car.obstacles) || []) {
@@ -188,6 +228,7 @@ $("#devices").addEventListener("click", async (ev) => {
 $("#play").addEventListener("click", async (ev) => {
   const b = ev.target.closest("button");
   if (!b) return;
+  curiousUntil = Date.now() + 3500;          // Roo wonders what the AI will do
   if (b.dataset.bat) {
     if (await post("/api/control", { cmd: "set_battery", value: Number(b.dataset.bat) })) toast(`The car's battery is now ${b.dataset.bat}%.`);
   } else if (b.id === "clear") {
