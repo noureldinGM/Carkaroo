@@ -75,3 +75,29 @@ def test_factory_over_mqtt_counts_each_box_once():
         sim.stop()
         bus.close()
         protocol.set_prefix("factory")
+
+
+def test_set_stations_adds_keys_and_limits_logins(tmp_path, monkeypatch):
+    from agv_brain import broker as B
+
+    keys_file = tmp_path / "devices.local.yaml"
+    b = B.Broker(1883, {}, ["AGV-1"], ["S1", "S2"], keys_file=keys_file, folder=tmp_path)
+    old = dict(b.keys)
+    b.set_stations(["S1", "S2", "S5"])
+    assert b.stations == ["S1", "S2", "S5"]
+    assert b.keys["S5"] and all(b.keys[k] == v for k, v in old.items())   # existing keys kept
+    assert "user S5" in B.acl_text(b.car_ids, b.stations)
+
+    b.set_stations(["S1", "S5"])          # S2 removed: its key stays in the file, but it cannot log in
+    assert "S2" in B.load_keys([], keys_file)
+    monkeypatch.setattr(B, "find_tool", lambda name: "mosquitto_passwd")
+    monkeypatch.setattr(B.subprocess, "run", lambda *a, **k: None)
+    b._write_files()
+    users = [line.split(":")[0] for line in (tmp_path / "passwords").read_text().splitlines()]
+    assert users == ["brain", "AGV-1", "S1", "S5"]
+    assert "user S2" not in (tmp_path / "acl").read_text()
+
+    for bad in ("S9\ntopic readwrite #", "a/b", "brain", "AGV-1", ""):
+        with pytest.raises(ValueError):
+            b.set_stations(["S1", bad])
+    assert b.stations == ["S1", "S5"]
