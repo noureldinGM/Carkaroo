@@ -48,11 +48,15 @@ python -m venv .venv
 ```bash
 .venv\Scripts\python -m pip install -r requirements.txt
 ```
-Start everything (MQTT broker with device keys, the AI, the website at http://localhost:8050). The **Setup** page switches between the simulation and the real car, shows each device's key, and has a track editor:
+Start the Carkaroo website (MQTT broker with device keys, the AI, the website at http://localhost:8050). Log in with the factory's name, build it on the **Setup** page (stations, track, device keys) and press Start:
 ```bash
 .venv\Scripts\python scripts\run_app.py
 ```
-Only the simulated factory, without a broker:
+No car or stations yet? The **Carkaroo Simulator** (http://localhost:8060) is a separate website that pretends to be them and logs in with the same keys ([how](docs/dashboard.md#practise-with-the-simulator)):
+```bash
+.venv\Scripts\python scripts\run_simulator.py
+```
+For developers, a quick simulated factory without a broker or the website:
 ```bash
 .venv\Scripts\python scripts\run_factory_sim.py
 ```

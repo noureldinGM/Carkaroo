@@ -81,15 +81,15 @@ def test_idle_until_start_then_stop(web):
     code, body = web.post("/api/login", {"name": "Exhibit Factory"})
     assert code == 200 and body["factory"] == {"id": "exhibit-factory", "name": "Exhibit Factory"}
     assert web.snap()["running"] is False
-    assert web.post("/api/run", {"mode": "sim", "speed": "fast"}) == \
-        (400, {"error": "The speed must be a number from 1 to 20."})
-    assert web.post("/api/run", {"mode": "sim", "speed": 10})[0] == 200
+    assert web.post("/api/run", {"mode": "sim", "speed": 10})[0] == 200    # mode and speed are ignored
+    # the website never simulates: it waits for the car and the stations to log in with their keys
+    assert web.app.mode == "real" and web.app.session.car is None and not web.app.session.stations
+    assert web.post("/api/sim", {"cmd": "set_battery", "value": 10})[0] == 404
     deadline = time.time() + 10
     while web.snap()["state"] is None and time.time() < deadline:
         time.sleep(0.1)
     d = web.snap()
     assert d["running"] is True and d["state"] is not None
-    assert factories.load("exhibit-factory")["speed"] == 10       # remembered for this factory
     assert web.post("/api/stop", {})[0] == 200
     d = web.snap()
     assert d["running"] is False and d["state"] is None and web.app.session is None
@@ -197,6 +197,6 @@ def test_a_new_station_needs_the_track_then_runs(web):
         assert web.post("/api/mode", {"track": "paint-track"})[0] == 200
         assert web.post("/api/run", {})[0] == 200
         assert "S5" in web.app.session.controller.ctx.settings.stations
-        assert {s.station for s in web.app.session.stations} >= {"S5"}
+        assert not web.app.session.stations            # S5 is a device that logs in, never simulated here
     finally:
         tracks_mod.TRACKS_DIR = tracks_mod.CONFIG_DIR / "tracks"

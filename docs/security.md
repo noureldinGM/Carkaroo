@@ -15,7 +15,11 @@ The website and the MQTT broker run on the laptop. This page lists what protects
 | Huge or slow requests | Bodies are capped at 1 MB, and a client that stops sending is dropped after 15 s. |
 | Reading files that are not part of the website | Only web file types (`.html .js .css .svg .png .jpg .json .md`) are served, and only from `static/` and `design/`. Paths cannot leave those folders. |
 
-Still open from another device on the Wi-Fi, on purpose: manual requests, the **Refilled** button and the simulation controls (handy on a phone at the rack). The login page has no password: it only names the factory, and only the laptop can open one. Only use `--host 0.0.0.0` on a network you trust.
+Still open from another device on the Wi-Fi, on purpose: manual requests and the **Refilled** button (handy on a phone at the rack). The login page has no password: it only names the factory, and only the laptop can open one. Only use `--host 0.0.0.0` on a network you trust.
+
+## The Carkaroo Simulator (`agv_brain/practice_server.py`)
+
+The practice website (port 8060) is a separate program with the same protections: JSON-only POSTs from the same site, the Host check, the CSP and headers, the size cap, and only web files from its own folder and `design/`. Every POST is for the laptop only, because it carries device keys, and the keys are never sent back to the page. Each pretend device logs in with its own key, so the broker's ACL limits it exactly like the real device. Its play controls never travel over MQTT.
 
 ## The broker and the devices (`agv_brain/broker.py`)
 

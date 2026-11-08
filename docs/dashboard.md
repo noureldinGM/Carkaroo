@@ -8,7 +8,7 @@ One command starts everything: the MQTT broker (with a key for every device), th
 ```bash
 .venv\Scripts\python scripts\run_app.py
 ```
-The website opens on the **login page**: type the factory's name. Nothing runs until you press **Start** (or **Try a simulation**). To also open the website on a phone or a second screen on the same Wi-Fi, add `--host 0.0.0.0` and browse to `http://<laptop IP>:8050`. Other devices see the pages, but only the laptop can change the setup or see the keys.
+The website opens on the **login page**: type the factory's name. Nothing runs until you press **Start**. The website never simulates anything: the car and the stations are devices that log in to the broker with their keys, either the real ones or the separate **Carkaroo Simulator** (see [Practise with the simulator](#practise-with-the-simulator)). To also open the website on a phone or a second screen on the same Wi-Fi, add `--host 0.0.0.0` and browse to `http://<laptop IP>:8050`. Other devices see the pages, but only the laptop can change the setup or see the keys.
 
 The real car needs the broker on port 1883 of the Wi-Fi network. The Mosquitto Windows service already holds that port but only listens on the laptop, so stop it once in an **administrator** PowerShell:
 ```powershell
@@ -17,15 +17,38 @@ Stop-Service mosquitto
 ```powershell
 Set-Service mosquitto -StartupType Manual
 ```
-Until then the app runs the simulation only, and the Setup page says why. (`--mqtt-port 1884` uses another port instead; the firmware must then use it too.) The first time, allow Mosquitto through the Windows firewall on private networks.
+Until then the factory cannot start (the car and the stations have nothing to log in to), and the Setup page says why. (`--mqtt-port 1884` uses another port instead; the firmware must then use it too.) The first time, allow Mosquitto through the Windows firewall on private networks.
 
-Simulation only, without any broker: `run_factory_sim.py` (`--speed 5`, `--policy fifo`, `--compare 40`).
+For developers, a quick simulation without any broker or login: `run_factory_sim.py` (`--speed 5`, `--policy fifo`, `--compare 40`). It is not the website.
 
 The website refuses commands sent by other web pages and only accepts setup changes from the laptop itself; see [security.md](security.md).
 
 ## Does it work with the real car?
 
-Yes. The website and the AI never talk to the car directly: they only read and send the MQTT messages in [protocol.md](protocol.md), and the simulated car sends exactly the same messages. Choose **Real car** on the Setup page, put the car's key in its firmware, and it appears on the map as soon as it sends its first status. This was checked with a program that logged in with the car's key: it showed online and received its first task.
+Yes. The website and the AI never talk to the car directly: they only read and send the MQTT messages in [protocol.md](protocol.md). Put the car's key in its firmware, and it appears on the map as soon as it sends its first status. The Carkaroo Simulator logs in the same way, with the same keys, so practising with it is a rehearsal for the real car.
+
+## Practise with the simulator
+
+The **Carkaroo Simulator** is a separate program with its own website. It pretends to be the car and the stations,
+and each pretend device logs in to the broker with its own ID and key, exactly like the real hardware.
+
+1. Start the Carkaroo website (`run_app.py`), log in, build the factory on Setup, and press **Start**. The Run card
+   says *"Waiting for: Car AGV-1, S1, …"*.
+2. Start the simulator in a second terminal and open **http://localhost:8060**:
+   ```bash
+   .venv\Scripts\python scripts\run_simulator.py
+   ```
+3. On the simulator, choose the factory. Then on the Carkaroo website, press **Setup → Devices → Copy all for the
+   simulator**, paste it into the simulator's **Connect** box and press **Connect all**. You can also type each key
+   by hand, like you will in the firmware. A wrong key is refused, like on the real car.
+4. Each device turns green on the Carkaroo website, the Run card says *"Everything is online"*, and Roo starts to
+   drive on the Map.
+5. Play on the simulator: drain the car's battery, put an obstacle on a line (click the pretend floor), set a
+   station's load cell, or **Disconnect** a device to pull its plug. Watch the Carkaroo website react.
+
+You can mix: connect only the pretend stations and use the real car. The simulator runs in real time, like the real
+devices. Its play controls change only the pretend world, through a bus inside the simulator; the real devices' keys
+only allow their own topics, and the simulator needs nothing more.
 
 ## The pages
 
@@ -35,15 +58,15 @@ The look comes from the **Carkaroo design system** in [`design/`](../design/READ
 
 **Login:** one field, the factory's name. A new name makes a new factory (it starts as a copy of the sample
 factory, so it can run at once); a name used before opens that factory again, and the factories made before are
-listed as buttons. Each factory keeps its own track, mode and speed in `config/factories/<name>/` (this laptop only,
+listed as buttons. Each factory keeps its own track in `config/factories/<name>/` (this laptop only,
 git ignores it). The header shows the factory's name and **Switch factory**, which goes back to the login page.
 
-**Start** (right after login): two big choices, **Try a simulation** (everything simulated, starts at once and opens
-the Map) or **Set up my factory** (opens Setup).
+**Start** (right after login): two big choices, **Start my factory** (the AI starts and waits for the devices) or
+**Set up my factory** (opens Setup), and a pointer to the Carkaroo Simulator for practice.
 
 The tabs are **Setup** (home), **Map**, **Stations** and **History**. The **Extra** menu holds **The AI, explained**
 and the design system. While nothing runs, the Map, Stations, History and AI pages say *"The factory is stopped"*
-with a **Start a simulation** button, and the pill next to the clock says **Stopped**.
+with a **Start** button, and the pill next to the clock says **Stopped** (or **Running**).
 
 **Setup** (home):
 - **Stations and materials:** build your factory. Each material (up to 5, letters A to E) has a name, how many units
@@ -55,13 +78,11 @@ with a **Start a simulation** button, and the pill next to the clock says **Stop
   note at the top of Setup lists what is missing and Start waits until the track has it. Saved in
   `config/factories/<name>/materials.yaml`, the same format as `config/materials.yaml`. The AI works with any
   stations: the ML ranker only looks at times, stock and priority, never at names.
-- **How it runs:** *Simulation* (with a speed slider from real time to x20), *Real car* (your car, simulated
-  stations until the load cells are built) or *Real factory*, and which track. **Start** runs it; while it runs,
-  **Apply changes** restarts the AI with the change and **Stop** stops it. The pill next to the clock shows the
-  mode on every page (yellow = simulation, green = real).
-- **Devices:** the car and each station, with online / offline, real or simulated. *Connect* shows what goes in the
-  firmware: the laptop's address and port, the username (the device ID), its **key** (*Show*, *Copy*, *New key*),
-  its topics and a code line.
+- **Run:** which track, **Start** and **Stop** (and *Use this track* while it runs). While it runs, it lists the
+  devices the AI is still waiting for, until *"Everything is online"*.
+- **Devices:** the car and each station, online or offline. *Connect* shows what goes in the firmware: the laptop's
+  address and port, the username (the device ID), its **key** (*Show*, *Copy*, *New key*), its topics and a code
+  line. **Copy all for the simulator** copies the address, the port and every key, for the Carkaroo Simulator.
 - **Track:** *Edit this track* or *Start an empty track* opens the editor. Draw on a 10 cm grid:
   - *Line* draws straight lines point by point;
   - *Junction*, *Rack*, *Station* and *Dock* place points (a point dropped on a line splits it);
@@ -83,8 +104,8 @@ with a **Start a simulation** button, and the pill next to the clock says **Stop
 - the factory floor: the robot car moving on the track. The yellow band is its route; dotted is the part after the
   pickup. A station with a yellow border is waiting for a delivery, red means it has stopped. The dot shows its
   stock: green OK, yellow low, red empty;
-- with the simulated car: **Low battery** (drain it to 15 %: the AI sends the car to charge first) and
-  **Obstacle** (click a line on the map: the car stops there, and after 10 s the AI sends it another way).
+- obstacles come from the car's ultrasonic sensor (or the simulator's obstacle): the car stops, and after 10 s
+  the AI sends it another way.
 
 If requests are waiting but none can be served (for example the warehouse has less than one box left, or a line is
 blocked), the top says *"Can't serve the waiting requests"* and lists the reasons.
@@ -92,8 +113,8 @@ blocked), the top says *"Can't serve the waiting requests"* and lists the reason
 **Stations:** one card per station with a stock bar per material (the yellow tick is the safety level), "runs out
 in …", and tags for *on the way* and *stopped*. Below:
 - **Play** (the capstone asks to show outputs changing with inputs): **Ask for a delivery** (a manual request: see
-  where the AI puts it) and, while the stations are simulated, **Change a stock reading** (for example set
-  Packaging / B to 1 and watch it jump to the top). A request the AI cannot take says why (*"Packaging does not use
+  where the AI puts it). The stock readings come from the stations' load cells, or from the simulator's
+  *A station's load cell* (set Packaging / B to 1 there and watch it jump to the top here). A request the AI cannot take says why (*"Packaging does not use
   that material"*, *"already asked for"*).
 - **Warehouse**, in boxes per material. The warehouse has no sensor: the AI counts every box the car takes, so after
   restocking a rack, press its **Refilled** button (it goes back to the full stock set on the Setup page).
@@ -111,8 +132,8 @@ runs out in, and **Details** (trip time, the examiner's "cost if first", ★ = l
 request went first" comparisons).
 
 Everything the pages send is checked: a request needs a station that uses that material, a refill a material of the
-factory, and the simulation controls a real line and numbers in range (stock 0 to the station's capacity, battery
-0-100 %, an obstacle for at most 10 minutes). A refusal shows its reason.
+factory. The simulator checks its play controls the same way (a real line, stock 0 to the station's capacity,
+battery 0-100 %, an obstacle for at most 10 minutes). A refusal shows its reason.
 
 ## How it works
 `agv_brain/dashboard/server.py` subscribes to `factory/ai/state` and `factory/ai/decision` on the message bus. The page (`agv_brain/dashboard/static/`) asks for a snapshot about 3 times a second.
