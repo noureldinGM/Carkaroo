@@ -15,6 +15,8 @@ With an `app` (agv_brain.app.App) it also serves the login, Start and Setup page
     POST /api/logout               back to the login page (stops the factory)
     POST /api/run                  {"mode": "sim", "speed": 8}  start the factory
     POST /api/stop                 stop it
+    GET  /api/factory/settings     the factory's materials and stations, for the Setup page
+    POST /api/factory/settings     {"materials": [...], "stations": [...]}  save them
     GET  /api/setup                mode, track, devices (keys only for the laptop itself)
     GET  /api/track/<id>           a track, for the editor
     POST /api/mode                 {"mode": "real_car", "track": "my-track", "speed": 8}  (restarts it if running)
@@ -250,6 +252,11 @@ class DashboardServer:
                 if app and path == "/api/factories":
                     from agv_brain import factories
                     return self._json(200, {"factories": factories.list_factories(), "current": app.factory_info()})
+                if app and path == "/api/factory/settings":
+                    from agv_brain import factories
+                    if not app.factory:
+                        return self._json(409, {"error": "Open a factory on the login page first."})
+                    return self._json(200, factories.editable(app.factory["id"]))
                 if app and path == "/api/setup":
                     return self._json(200, app.setup(self.local))
                 if app and path.startswith("/api/track/"):
@@ -289,7 +296,8 @@ class DashboardServer:
                 if not isinstance(body, dict):
                     return self._send(400, b'{"error": "send a JSON object"}')
                 app = server.app
-                if app and (self.path in ("/api/login", "/api/logout", "/api/run", "/api/stop", "/api/mode")
+                if app and (self.path in ("/api/login", "/api/logout", "/api/run", "/api/stop", "/api/mode",
+                                          "/api/factory/settings")
                             or self.path.startswith(("/api/device/", "/api/track/"))):
                     return self._setup_post(body)
                 if self.path in ("/api/request", "/api/refill", "/api/sim"):
@@ -332,11 +340,15 @@ class DashboardServer:
                     if self.path == "/api/logout":
                         app.logout()
                         return self._json(200, {"ok": True})
-                    if not app.factory and self.path in ("/api/run", "/api/mode", "/api/track/save"):
+                    if not app.factory and self.path in ("/api/run", "/api/mode", "/api/track/save",
+                                                         "/api/factory/settings"):
                         return self._json(409, {"error": "Open a factory on the login page first."})
                     if self.path == "/api/run":
                         app.run(body.get("mode"), body.get("speed"))
                         return self._json(200, {"ok": True, "mode": app.mode, "running": app.running})
+                    if self.path == "/api/factory/settings":
+                        problems = app.save_factory_settings(body)
+                        return self._json(200, {"ok": True, "running": app.running, "track_problems": problems})
                     if self.path == "/api/stop":
                         app.stop_session()
                         return self._json(200, {"ok": True, "running": False})

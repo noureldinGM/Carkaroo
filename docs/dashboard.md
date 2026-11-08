@@ -46,6 +46,15 @@ and the design system. While nothing runs, the Map, Stations, History and AI pag
 with a **Start a simulation** button, and the pill next to the clock says **Stopped**.
 
 **Setup** (home):
+- **Stations and materials:** build your factory. Each material (up to 5, letters A to E) has a name, how many units
+  go in one box (one trip) and how many the warehouse holds when full; its rack is W-A, W-B… Each station (up to 8,
+  S1 to S8) has a name, a priority (high, medium, low) and ticks the materials it uses, each with how much it holds,
+  its safety level, its stock at the start and how many it uses per minute. *Save* checks everything (for example
+  two stations with the same name, a stock above what the station holds, a material no station uses) and says what
+  to fix. A running factory restarts with the change. If the track does not have the new rack or station yet, a red
+  note at the top of Setup lists what is missing and Start waits until the track has it. Saved in
+  `config/factories/<name>/materials.yaml`, the same format as `config/materials.yaml`. The AI works with any
+  stations: the ML ranker only looks at times, stock and priority, never at names.
 - **How it runs:** *Simulation* (with a speed slider from real time to x20), *Real car* (your car, simulated
   stations until the load cells are built) or *Real factory*, and which track. **Start** runs it; while it runs,
   **Apply changes** restarts the AI with the change and **Stop** stops it. The pill next to the clock shows the
@@ -87,7 +96,7 @@ in …", and tags for *on the way* and *stopped*. Below:
   Packaging / B to 1 and watch it jump to the top). A request the AI cannot take says why (*"Packaging does not use
   that material"*, *"already asked for"*).
 - **Warehouse**, in boxes per material. The warehouse has no sensor: the AI counts every box the car takes, so after
-  restocking a rack, press its **Refilled** button (it goes back to the full stock in `config/materials.yaml`).
+  restocking a rack, press its **Refilled** button (it goes back to the full stock set on the Setup page).
 
 **History:** the totals so far (deliveries, how long production lines were stopped, battery), alerts, and what
 happened: one card per delivery (task, pickup, delivered), with the other events in between.

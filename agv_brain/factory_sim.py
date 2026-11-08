@@ -25,18 +25,20 @@ from agv_brain.simulator import load_context
 class FactorySim:
     def __init__(self, policy: str = "ml", speed: float = 20.0, seed: int = 0, bus=None,
                  log: bool = True, battery: float = 90.0, period_s: float | None = None,
-                 layout=None, sim_car: bool = True, sim_stations: bool = True, car_id: str = "AGV-1"):
+                 layout=None, sim_car: bool = True, sim_stations: bool = True, car_id: str = "AGV-1",
+                 materials=None):
         if not (sim_car and sim_stations):
             speed = 1.0   # real devices live in real time
         self.clock = Clock(speed)
         # on a shared bus, a scoped view lets stop() remove everything this session added
         self.bus = ScopedBus(bus) if bus is not None else MemoryBus()
-        dispatcher = Dispatcher.from_config(policy=policy, layout=layout)
+        # materials: the factory's stations and materials (default config/materials.yaml)
+        dispatcher = Dispatcher.from_config(policy=policy, layout=layout, materials=materials)
         self.log = EventLog() if log else None
         # the controller plans on its own map; the car drives on a separate copy (the "real" track)
         self.controller = Controller(self.bus, dispatcher, self.clock, car_id=car_id, log=self.log,
                                      period_s=period_s or min(0.5, max(0.05, 5.0 / speed)))
-        truth = load_context(layout)
+        truth = load_context(layout, materials)
         s = truth.settings
         self.car = SimulatedCar(self.bus, self.clock, truth.fmap, s, car_id=car_id,
                                 start=CarState(s.car.dock, s.car.start_heading, battery), seed=seed) if sim_car else None
