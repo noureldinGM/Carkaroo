@@ -99,6 +99,39 @@ To check the model outside simulation, `scripts/evaluate_real_layouts.py` tests 
 - **Assumed:** an AGV speed of 1 m/s. The script also checks other speeds.
 - The data is **never used for training**. Labels come from the exact optimizer, as everywhere else. Results: `reports/real_layouts.md`.
 
+## Shortage-risk dataset (second model)
+The second model (`agv_brain/risk_model.py`) predicts, for one station and one material, the probability that it **runs out before a box sent now could arrive**. Its data is also **simulated**, by `agv_brain/demand.py` and `agv_brain/risk_dataset.py`:
+
+1. **Timelines.** One timeline is one simulated hour of a factory: our track or one of 200 random layouts. Every 2 s, each station-material uses material at
+   `base rate × shift multiplier × (1 + running production orders) × surge × (0 during planned downtime) × noise (±15 %)`.
+   - 3 shifts with planned multipliers (day 1.0, evening 0.6–1.2, night 0.2–0.6), lasting 5–20 minutes (compressed time for the table-top factory);
+   - 0–12 production orders per hour (+30–100 % usage for 1–7 min), 70 % of them announced up to 3 min before they start;
+   - 0–4 unannounced surges per hour (×1.5–2.5 for 0.5–2.5 min);
+   - a planned maintenance stop (1–5 min) in half of the timelines.
+
+   Stock = previous stock + deliveries − used, never below 0. The load cell reports whole units. A box is ordered when the reading reaches a reorder point and arrives after 1–4 car trips.
+2. **Rows.** After a 15-minute warm-up, a row is taken about every 45 s for each station-material that still has stock. The inputs (28) only use readings up to that moment and the production plan as known then:
+   - the stock and the usage over the last 1, 5 and 15 minutes;
+   - the forecaster's rate;
+   - the shift, the next shift and the time to the change;
+   - running and announced orders, and planned downtime;
+   - the car's trip and the trips queued ahead (ETA).
+3. **Label.** `shortage_before_delivery` = 1 if the **real future** usage between now and now + ETA is at least the stock now. The future includes unannounced surges and orders, and the noise. `empty_in_s` (when it would run out) is kept for explanation and is never an input.
+4. **Split.** By timeline: 70 % train, 15 % validation (calibration and threshold), 15 % test. A separate set of timelines in factories built from another seed is the unseen-layouts test.
+
+Regenerate it with:
+```bash
+python scripts/generate_risk_dataset.py
+```
+Size: 43,299 rows from 180 timelines, 27 % shortages, no missing values, no duplicate rows. The unseen-layout test adds 9,603 rows from 40 timelines.
+
+| File | In git | What it is |
+|---|---|---|
+| `data/sample/risk_sample.csv` | yes | the first 20 timelines (readable, for the exhibition) |
+| `data/generated/risk.csv`, `risk_unseen.csv` | no | all rows |
+
+Results: `reports/risk_model.md`. The whole pipeline, for both models, can also be run step by step in Google Colab: `notebooks/carkaroo_ai_colab.ipynb` (upload the zip from `python scripts/make_colab_bundle.py`).
+
 ## Train / test split
 - Training holds out 20 % of the situations, whole situations at a time, for validation (`scripts/train_ranker.py`).
 - The final test (`scripts/evaluate.py`) uses different random seeds from training, with up to **7** requests per situation (training used at most 6). It has two parts:
