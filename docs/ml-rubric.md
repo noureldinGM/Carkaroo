@@ -22,10 +22,26 @@ Where the three missing points come from:
 - **7 requests at once:** training stops at 6. Training with up to 7–8 would likely fix it.
 - **Speed (20.5 ms):** just over the 20 ms line, measured while other programs were busy on the laptop. Re-measure on a quiet laptop before the exhibition: v2 and v3 measured 9–12 ms that way.
 
+## Second model: shortage risk
+
+The shortage-risk model (`agv_brain/risk_model.py`) gives each station the probability that it runs out before a box sent now could arrive. The ranker above still makes the decision. Scores from `reports/risk_model.md`:
+
+| Criterion | 4 – Excellent | 3 – Good | 2 – Fair | 1 – Weak | This project |
+|---|---|---|---|---|---|
+| **Accuracy** (test timelines never seen) | ≥ 90 % | 80–90 % | 65–80 % | < 65 % | 97.8 % → **4** |
+| **Catches shortages** (recall at the alarm threshold) | ≥ 95 % | 90–95 % | 80–90 % | < 80 % | 94.6 % → **3** |
+| **Better than the best formula** (accuracy gap) | ≥ +5 points | +2–5 | +0.5–2 | < +0.5 | +0.9 over the plan formula (96.9 %); +2.7 on close calls (94.4 % vs 91.7 %) → **2** |
+| **Honest probabilities** (Brier score; calibration chart) | ≤ 0.02 | ≤ 0.05 | ≤ 0.10 | > 0.10 | 0.017 → **4** |
+| **Generalization** (accuracy drop in factories never seen) | ≤ 2 points | ≤ 5 | ≤ 10 | > 10 | 97.7 % vs 97.8 %: 0.1 → **4** |
+| **No leakage** (split by timeline, inputs only from the past) | split by timeline + tested | split by timeline | split by row | none | split by timeline, `tests/test_risk.py` checks that changing the future does not change the inputs → **4** |
+
+**Total: 21 / 24.** The weak point is the gap to the plan formula: most moments are clearly safe or clearly not, so a formula that uses the production plan is already right 96.9 % of the time. The model adds most on the close calls and by giving a calibrated probability instead of a yes/no.
+
 ## How each number is produced
 - Accuracy (offline and live), the rule comparison, factory effect, both generalization rows and speed come from `python scripts/evaluate.py` → `reports/evaluation.md`.
 - Real factory layouts: `python scripts/evaluate_real_layouts.py` → `reports/real_layouts.md` (see [dataset.md](dataset.md#real-factory-layouts-test-only)).
 - Dataset quality: [dataset.md](dataset.md).
+- Shortage-risk model: `python scripts/generate_risk_dataset.py`, `train_risk.py`, `evaluate_risk.py` → `reports/risk_model.md`. The same steps, explained, in `notebooks/carkaroo_ai_colab.ipynb` (Google Colab).
 - Explainability: every `Decision` has `reasons` (see `python scripts/demo.py` and the dashboard), and `reports/feature_importance.png` shows which factors matter most.
 - Robustness: `agv_brain/safety.py` checks warehouse stock, room for a box, reachability and battery before the ML is asked. Every decision is compared with the exact optimizer, and the dashboard shows it.
 

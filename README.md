@@ -40,6 +40,8 @@ The ML ranker cuts production stop time by **42 %** compared with first come, fi
 
 ![Accuracy by number of requests](reports/accuracy_by_requests.png)
 
+**Second model: shortage risk.** For each station, the probability that it runs out before a box sent now could arrive, while demand changes with shifts, production orders, surges and downtime (simulated). On test timelines it never saw it is right **97.8 %** of the time (factories never seen: 97.7 %), against 96.9 % for a formula using the production plan and 92.4 % for "stock ÷ rate < arrival time". It gives calibrated probabilities (Brier 0.017). The ranker still decides; the risk explains the urgency. Report: [reports/risk_model.md](reports/risk_model.md). Both models can be trained step by step in Google Colab, with nothing to install on a PC: [open the notebook in Colab](https://colab.research.google.com/github/noureldinGM/Capstone-AVG/blob/main/notebooks/carkaroo_ai_colab.ipynb) ([notebooks/carkaroo_ai_colab.ipynb](notebooks/carkaroo_ai_colab.ipynb); setup steps at its top).
+
 ## Quick start (Windows)
 
 ```bash
