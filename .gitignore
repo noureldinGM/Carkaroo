@@ -20,7 +20,7 @@ config/factories/
 # Run logs (readings, decisions, events of each run)
 logs/
 
-# Editors / OS / Claude Code worktrees
+# Editors / OS / local tool folders
 .claude/
 .vscode/
 .idea/

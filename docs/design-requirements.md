@@ -17,6 +17,6 @@ The capstone asks for at least four measurable requirements, including response 
 R1, R2 and R6 come from the latest `reports/evaluation.md` (and `reports/real_layouts.md` for the real factories). Re-run `python scripts/evaluate.py` after retraining and update them here.
 
 ## Showing outputs change with inputs
-The capstone asks you to show how the system's output changes as its inputs change. The easiest way is the **live dashboard** (`python scripts/run_factory_sim.py`, see [dashboard.md](dashboard.md)). Change a stock reading, block a line or drain the battery, and the AI's choice changes in front of you. Two more ways:
+The capstone asks you to show how the system's output changes as its inputs change. The easiest way is the **website with the Carkaroo Simulator** (`scripts/run_app.py`, then `scripts/run_simulator.py`, see [dashboard.md](dashboard.md)). Change a stock reading, block a line or drain the battery, and the AI's choice changes in front of you. Two more ways:
 - `python scripts/sensitivity.py` sweeps the stock of B at S3 and shows where the decision flips from "B first" to "A first", along with the line-stop time for ML vs first come, first served (`reports/sensitivity.png`).
 - `python scripts/demo.py --stock S3:B=8` (or any other reading, battery level or blocked line) shows the live decision and its reasons change.
