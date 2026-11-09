@@ -2,8 +2,9 @@
 
     python scripts/make_colab_bundle.py
 
-The GitHub repository is private, so Colab cannot clone it without a password.
-Instead, upload this zip in the notebook's first cell (no passwords involved).
+Only needed without a GitHub token. Normally the notebook downloads the code
+from GitHub itself (SOURCE = "github", token in Colab's Secrets). Without a
+token, set SOURCE = "zip" in the notebook's first cell and upload this zip.
 
 It holds the AI code (agv_brain/ without the website), the factory settings
 (config/factory_layout.yaml and materials.yaml only: no device keys, no MQTT

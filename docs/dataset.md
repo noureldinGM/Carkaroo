@@ -130,7 +130,7 @@ Size: 43,299 rows from 180 timelines, 27 % shortages, no missing values, no dupl
 | `data/sample/risk_sample.csv` | yes | the first 20 timelines (readable, for the exhibition) |
 | `data/generated/risk.csv`, `risk_unseen.csv` | no | all rows |
 
-Results: `reports/risk_model.md`. The whole pipeline, for both models, can also be run step by step in Google Colab: `notebooks/carkaroo_ai_colab.ipynb` (upload the zip from `python scripts/make_colab_bundle.py`).
+Results: `reports/risk_model.md`. The whole pipeline, for both models, can also be run step by step in Google Colab: `notebooks/carkaroo_ai_colab.ipynb`. It downloads the code from GitHub with a read-only token kept in Colab's Secrets, so nothing has to run on a PC.
 
 ## Train / test split
 - Training holds out 20 % of the situations, whole situations at a time, for validation (`scripts/train_ranker.py`).
